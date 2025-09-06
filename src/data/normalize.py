@@ -12,6 +12,10 @@ Run the module as a script to quickly normalize the CSV files placed in
 
     python -m src.data.normalize
 
+Or use the small sample dataset::
+
+    python -m src.data.normalize --sample
+
 The CLI loads all CSVs using :func:`src.data.loader.load_raw`, applies the
 normalization and prints the first few rows.
 """
@@ -175,6 +179,11 @@ def _main() -> None:  # pragma: no cover - convenience utility
         help="Directory containing raw CSV files",
     )
     parser.add_argument(
+        "--sample",
+        action="store_true",
+        help="Use sample data from data/sample instead of full raw dataset",
+    )
+    parser.add_argument(
         "--head",
         type=int,
         default=5,
@@ -182,7 +191,8 @@ def _main() -> None:  # pragma: no cover - convenience utility
     )
     args = parser.parse_args()
 
-    df_raw = load_raw(args.data_dir)
+    data_dir = Path("data/sample") if args.sample else args.data_dir
+    df_raw = load_raw(data_dir)
     df_norm = to_train_events(df_raw)
     print(df_norm.head(args.head).to_string(index=False))
 
