@@ -7,6 +7,7 @@ and returns a concatenated :class:`pandas.DataFrame` containing the data.
 
 from __future__ import annotations
 
+import argparse
 import logging
 from pathlib import Path
 from typing import Iterable
@@ -52,7 +53,26 @@ def load_raw(data_dir: str | Path = Path("data/raw")) -> pd.DataFrame:
     return pd.DataFrame()
 
 
+def _main() -> None:  # pragma: no cover - convenience utility
+    parser = argparse.ArgumentParser(description="Load raw CSV datasets")
+    parser.add_argument(
+        "--data-dir",
+        default=Path("data/raw"),
+        type=Path,
+        help="Directory containing raw CSV files",
+    )
+    parser.add_argument(
+        "--sample",
+        action="store_true",
+        help="Use sample data from data/sample instead of full raw dataset",
+    )
+    args = parser.parse_args()
+
+    data_dir = Path("data/sample") if args.sample else args.data_dir
+    df = load_raw(data_dir)
+    print(f"Total rows: {len(df)}")
+
+
 if __name__ == "__main__":  # pragma: no cover
     logging.basicConfig(level=logging.INFO)
-    df = load_raw()
-    print(f"Total rows: {len(df)}")
+    _main()
