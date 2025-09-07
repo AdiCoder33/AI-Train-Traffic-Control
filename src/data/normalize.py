@@ -113,12 +113,22 @@ def _parse_times_with_service_date(df: pd.DataFrame, cols: list[str]) -> None:
             continue
         ser = df[col].astype("string")
         mask_time_only = ser.str.match(r"^\s*\d{1,2}:\d{2}(:\d{2})?\s*$", na=False)
-        # Parse anything that already looks like a full datetime
-        parsed = pd.to_datetime(ser.where(~mask_time_only), utc=True, errors="coerce")
-        # Combine service_date with time-of-day entries
+        # Parse anything that already looks like a full datetime without warnings
+        parsed = pd.to_datetime(
+            ser.where(~mask_time_only), utc=True, errors="coerce", format="mixed"
+        )
+        # Combine service_date with time-of-day entries and parse with explicit format
         if mask_time_only.any():
             combined = (svc + " " + ser.where(mask_time_only, "")).where(mask_time_only)
-            parsed_time = pd.to_datetime(combined, utc=True, errors="coerce")
+            parsed_time = pd.to_datetime(
+                combined, utc=True, errors="coerce", format="%Y-%m-%d %H:%M:%S"
+            )
+            # Fallback for values without seconds
+            missing = parsed_time.isna()
+            if missing.any():
+                parsed_time.loc[missing] = pd.to_datetime(
+                    combined[missing], utc=True, errors="coerce", format="%Y-%m-%d %H:%M"
+                )
             parsed = parsed.fillna(parsed_time)
         df[col] = parsed
 
