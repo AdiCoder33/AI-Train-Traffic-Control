@@ -38,19 +38,23 @@ logger = logging.getLogger(__name__)
 # Column mapping from potential raw names to canonical ones.  The mapping
 # purposefully contains a variety of common alternatives so that the
 # function remains robust to slight variations across datasets.
-_COLUMN_MAP: Mapping[str, str] = {
+_COLUMN_MAP_RAW: Mapping[str, str] = {
     "train": "train_id",
     "train_id": "train_id",
     "trainno": "train_id",
     "train_no": "train_id",
+    "Train No": "train_id",
     "station": "station_name",
     "station_name": "station_name",
+    "Station Code": "station_name",
     "sched_arr": "sched_arr",
     "scheduled_arrival": "sched_arr",
     "planned_arrival": "sched_arr",
+    "Arrival time": "sched_arr",
     "sched_dep": "sched_dep",
     "scheduled_departure": "sched_dep",
     "planned_departure": "sched_dep",
+    "Departure Time": "sched_dep",
     "act_arr": "act_arr",
     "actual_arrival": "act_arr",
     "real_arrival": "act_arr",
@@ -62,10 +66,17 @@ _COLUMN_MAP: Mapping[str, str] = {
     "priority": "priority",
 }
 
+# Normalize keys to allow case-insensitive and whitespace tolerant lookups
+_COLUMN_MAP: Mapping[str, str] = {k.strip().lower(): v for k, v in _COLUMN_MAP_RAW.items()}
+
 
 def _rename_columns(df: pd.DataFrame) -> pd.DataFrame:
     """Return a copy of *df* with columns renamed to canonical names."""
-    rename_map = {c: _COLUMN_MAP[c] for c in df.columns if c in _COLUMN_MAP}
+    rename_map = {}
+    for c in df.columns:
+        key = c.strip().lower()
+        if key in _COLUMN_MAP:
+            rename_map[c] = _COLUMN_MAP[key]
     return df.rename(columns=rename_map).copy()
 
 
