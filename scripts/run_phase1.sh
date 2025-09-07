@@ -33,23 +33,43 @@ df.to_parquet(f"{out_dir}/raw.parquet", index=False)
 PYTHON
 
 echo "[2/6] Normalizing dataset"
-python - "$ARTIFACT_DIR" <<'PYTHON'
+python - "$ARTIFACT_DIR" "$DATE" <<'PYTHON'
 import sys
 import pandas as pd
 from src.data.normalize import to_train_events
-artifact_dir = sys.argv[1]
+artifact_dir, date = sys.argv[1], sys.argv[2]
 df_raw = pd.read_parquet(f"{artifact_dir}/raw.parquet")
-df_norm = to_train_events(df_raw)
+df_norm = to_train_events(df_raw, default_service_date=date)
 df_norm.to_parquet(f"{artifact_dir}/events.parquet", index=False)
 PYTHON
 
 echo "[3/6] Slicing corridor"
 python - "$ARTIFACT_DIR" "$DATE" "$STATIONS_FILE" <<'PYTHON'
 import sys, json
+from pathlib import Path
 import pandas as pd
 from src.data.corridor import slice as corridor_slice
+import src.data.normalize as normalize_mod
+
 artifact_dir, date, stations_path = sys.argv[1], sys.argv[2], sys.argv[3]
-stations = [s.strip() for s in open(stations_path) if s.strip()]
+raw_stations = [s.strip() for s in open(stations_path, encoding='utf-8') if s.strip()]
+
+# Determine if entries are already IDs like S0001
+def looks_like_id(s: str) -> bool:
+    return s.upper().startswith('S') and s[1:].isdigit()
+
+stations = raw_stations[:]
+if not all(looks_like_id(s) for s in raw_stations):
+    # Map names to ids using station_map.csv produced by normalization
+    station_map_path = Path(normalize_mod.__file__).with_name('station_map.csv')
+    if station_map_path.exists():
+        sm = pd.read_csv(station_map_path)
+        name_to_id = dict(zip(sm['name'], sm['station_id']))
+        mapped = [name_to_id.get(s, s) for s in raw_stations]
+        stations = mapped
+    else:
+        stations = raw_stations  # fallback: pass through
+
 df_norm = pd.read_parquet(f"{artifact_dir}/events.parquet")
 df_slice, stations_dict = corridor_slice(df_norm, stations, date)
 df_slice.to_parquet(f"{artifact_dir}/events_clean.parquet", index=False)

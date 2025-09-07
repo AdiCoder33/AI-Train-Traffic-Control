@@ -44,17 +44,22 @@ _COLUMN_MAP_RAW: Mapping[str, str] = {
     "trainno": "train_id",
     "train_no": "train_id",
     "Train No": "train_id",
+    "Train No ": "train_id",
+    "Train Number": "train_id",
     "station": "station_name",
     "station_name": "station_name",
-    "Station Code": "station_name",
+    "Station Code": "station_code",
+    "Station Name": "station_name",
     "sched_arr": "sched_arr",
     "scheduled_arrival": "sched_arr",
     "planned_arrival": "sched_arr",
     "Arrival time": "sched_arr",
+    "ARRIVAL time": "sched_arr",
     "sched_dep": "sched_dep",
     "scheduled_departure": "sched_dep",
     "planned_departure": "sched_dep",
     "Departure Time": "sched_dep",
+    "DEPARTURE TIME": "sched_dep",
     "act_arr": "act_arr",
     "actual_arrival": "act_arr",
     "Actual Arrival": "act_arr",
@@ -63,6 +68,10 @@ _COLUMN_MAP_RAW: Mapping[str, str] = {
     "actual_departure": "act_dep",
     "Actual Departure": "act_dep",
     "real_departure": "act_dep",
+    # Date indicators
+    "service_date": "service_date",
+    "Service Date": "service_date",
+    "date": "service_date",
     "service_day": "day",
     "day": "day",
     "priority": "priority",
@@ -82,11 +91,36 @@ def _rename_columns(df: pd.DataFrame) -> pd.DataFrame:
     return df.rename(columns=rename_map).copy()
 
 
-def _parse_times(df: pd.DataFrame, cols: list[str]) -> None:
-    """Parse columns in *cols* to UTC timestamps in-place."""
+def _parse_times_with_service_date(df: pd.DataFrame, cols: list[str]) -> None:
+    """Parse time or datetime columns using ``service_date`` when needed.
+
+    If a column contains time-of-day strings (e.g. ``11:06:00``) without a
+    date, combine with ``service_date`` to form full timestamps. Results are
+    timezone-aware (UTC).
+    """
+    if "service_date" not in df.columns:
+        # Without service_date, fall back to best-effort parsing.
+        for col in cols:
+            if col in df.columns:
+                df[col] = pd.to_datetime(df[col], utc=True, errors="coerce")
+        return
+
+    # Ensure service_date is a date string per row
+    svc = pd.to_datetime(df["service_date"], errors="coerce").dt.date.astype(str)
+
     for col in cols:
-        if col in df.columns:
-            df[col] = pd.to_datetime(df[col], utc=True, errors="coerce")
+        if col not in df.columns:
+            continue
+        ser = df[col].astype("string")
+        mask_time_only = ser.str.match(r"^\s*\d{1,2}:\d{2}(:\d{2})?\s*$", na=False)
+        # Parse anything that already looks like a full datetime
+        parsed = pd.to_datetime(ser.where(~mask_time_only), utc=True, errors="coerce")
+        # Combine service_date with time-of-day entries
+        if mask_time_only.any():
+            combined = (svc + " " + ser.where(mask_time_only, "")).where(mask_time_only)
+            parsed_time = pd.to_datetime(combined, utc=True, errors="coerce")
+            parsed = parsed.fillna(parsed_time)
+        df[col] = parsed
 
 
 def _ensure_station_map(df: pd.DataFrame, path: Path) -> dict[str, str]:
@@ -106,7 +140,15 @@ def _ensure_station_map(df: pd.DataFrame, path: Path) -> dict[str, str]:
     # Build lookup dictionary for existing entries
     name_to_id: dict[str, str] = dict(zip(station_map["name"], station_map["station_id"]))
 
-    unique_names = sorted({n for n in df["station_name"].dropna().unique() if n not in name_to_id})
+    # Handle potential duplicate 'station_name' columns (e.g., both code and name
+    # mapped to the same canonical name). If duplicates exist, take the first.
+    col = df["station_name"]
+    if isinstance(col, pd.DataFrame):
+        ser = col.iloc[:, 0]
+    else:
+        ser = col
+
+    unique_names = sorted({n for n in ser.dropna().unique() if n not in name_to_id})
     if unique_names:
         start_idx = len(station_map)
         new_ids = [f"S{start_idx + i:04d}" for i in range(len(unique_names))]
@@ -119,7 +161,10 @@ def _ensure_station_map(df: pd.DataFrame, path: Path) -> dict[str, str]:
 
 
 def to_train_events(
-    df_raw: pd.DataFrame, station_map_path: str | Path | None = None
+    df_raw: pd.DataFrame,
+    station_map_path: str | Path | None = None,
+    *,
+    default_service_date: str | pd.Timestamp | None = None,
 ) -> pd.DataFrame:
     """Normalize raw train event records.
 
@@ -141,8 +186,32 @@ def to_train_events(
     """
     df = _rename_columns(df_raw)
 
+    # Establish service_date
+    if "service_date" not in df.columns:
+        if default_service_date is None:
+            # Try deriving from any existing datetime-like column; if none,
+            # we cannot construct proper timestamps for time-of-day fields.
+            candidate = None
+            for col in ("sched_arr", "sched_dep", "act_arr", "act_dep"):
+                if col in df.columns:
+                    candidate = pd.to_datetime(df[col], errors="coerce")
+                    if candidate.notna().any():
+                        break
+            if candidate is not None and candidate.notna().any():
+                df["service_date"] = candidate.dt.date
+            else:
+                if len(df) > 0:
+                    raise ValueError(
+                        "service_date missing and cannot be derived; provide default_service_date"
+                    )
+                else:
+                    df["service_date"] = pd.NaT
+        else:
+            df["service_date"] = pd.to_datetime(default_service_date).date()
+
+    # Parse times with awareness of service_date
     time_cols = ["sched_arr", "sched_dep", "act_arr", "act_dep"]
-    _parse_times(df, time_cols)
+    _parse_times_with_service_date(df, time_cols)
 
     # Compute delays
     if "act_arr" in df.columns and "sched_arr" in df.columns:
@@ -160,14 +229,25 @@ def to_train_events(
     else:
         station_map_path = Path(station_map_path)
 
+    # Determine a single station naming series (prefer human-readable name)
+    station_series = None
     if "station_name" in df.columns:
-        name_to_id = _ensure_station_map(df, station_map_path)
-        df["station_id"] = df["station_name"].map(name_to_id)
+        col = df["station_name"]
+        station_series = col.iloc[:, 0] if isinstance(col, pd.DataFrame) else col
+    elif "station_code" in df.columns:
+        station_series = df["station_code"]
+
+    if station_series is not None:
+        # Build/update station_map from the resolved series
+        tmp_df = pd.DataFrame({"station_name": station_series})
+        name_to_id = _ensure_station_map(tmp_df, station_map_path)
+        df["station_id"] = station_series.map(name_to_id)
 
     # Arrange columns
     cols = [
         "train_id",
         "station_id",
+        "service_date",
         "sched_arr",
         "sched_dep",
         "act_arr",

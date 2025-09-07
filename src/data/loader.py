@@ -42,7 +42,15 @@ def load_raw(data_dir: str | Path = Path("data/raw")) -> pd.DataFrame:
     frames: list[pd.DataFrame] = []
 
     for csv_path in _iter_csv_files(data_dir):
-        df = pd.read_csv(csv_path)
+        # Read as strings to avoid mixed-type Arrow write errors; trim whitespace
+        df = pd.read_csv(
+            csv_path,
+            dtype=str,
+            low_memory=False,
+            encoding="utf-8-sig",
+        )
+        # Normalize whitespace in column names
+        df.columns = [c.strip() for c in df.columns]
         logger.info("Columns in %s: %s", csv_path.name, list(df.columns))
         frames.append(df)
 

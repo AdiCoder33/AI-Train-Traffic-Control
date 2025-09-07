@@ -141,3 +141,11 @@ Normalize into parquet partitions by date/section.
 - Export action plan to CSV/PDF.
 
 Generate the full codebase with stubs, docstrings, and a minimal demo run that works out-of-the-box on a 2000-row slice. Prefer readability and modularity over micro-optimizations.
+
+## Phase 1 Pipeline (Windows)
+- Create venv: `python -m venv .venv` then `.\.venv\Scripts\Activate.ps1`
+- Install deps: `pip install -r requirements.txt`
+- Place raw CSVs under `data/raw/`
+- Prepare a stations file like `data/demo_corridor_stations.txt` (one station name or ID per line)
+- Run: `./scripts/run_phase1.ps1 demo_corridor 2024-01-01`
+- Artifacts appear under `artifacts/<corridor>/<date>/` including `events.parquet`, `section_edges.parquet`, `kpis.json`, and `baseline_gantt.png`.
