@@ -72,6 +72,9 @@ _COLUMN_MAP_RAW: Mapping[str, str] = {
     "service_date": "service_date",
     "Service Date": "service_date",
     "date": "service_date",
+    # Sequence/order within a train's stops
+    "seq": "stop_seq",
+    "SEQ": "stop_seq",
     "service_day": "day",
     "day": "day",
     "priority": "priority",
@@ -131,6 +134,51 @@ def _parse_times_with_service_date(df: pd.DataFrame, cols: list[str]) -> None:
                 )
             parsed = parsed.fillna(parsed_time)
         df[col] = parsed
+
+
+def _apply_midnight_rollover(df: pd.DataFrame) -> None:
+    """Adjust timestamps that cross midnight within each train's sequence.
+
+    For each ``train_id`` group, we scan rows in their existing order and
+    increment the day by +1 whenever the current reference time is earlier
+    than the previous one. All available time columns on that row are
+    adjusted by the cumulative offset.
+    """
+    time_cols = [c for c in ("sched_arr", "sched_dep", "act_arr", "act_dep") if c in df.columns]
+    if not time_cols or "train_id" not in df.columns:
+        return
+
+    for _, grp in df.groupby("train_id", sort=False):
+        # Determine traversal order: prefer stop_seq; otherwise by earliest available time
+        if "stop_seq" in grp.columns and grp["stop_seq"].notna().any():
+            grp = grp.sort_values("stop_seq")
+        else:
+            tmin = None
+            for c in time_cols:
+                val = grp[c]
+                tmin = val if tmin is None else tmin.combine_first(val)
+            if tmin is not None:
+                grp = grp.assign(__tmin__=tmin).sort_values("__tmin__").drop(columns="__tmin__")
+
+        prev = pd.NaT
+        offset_days = 0
+        for idx in grp.index:
+            # choose first non-null as reference
+            ref = pd.NaT
+            for c in time_cols:
+                val = df.at[idx, c]
+                if pd.notna(val):
+                    ref = val
+                    break
+            if pd.notna(prev) and pd.notna(ref) and ref < prev:
+                offset_days += 1
+            if offset_days:
+                delta = pd.Timedelta(days=offset_days)
+                for c in time_cols:
+                    v = df.at[idx, c]
+                    if pd.notna(v):
+                        df.at[idx, c] = pd.to_datetime(v, utc=True) + delta
+            prev = ref if pd.isna(prev) else max(prev, ref)
 
 
 def _ensure_station_map(df: pd.DataFrame, path: Path) -> dict[str, str]:
@@ -219,9 +267,38 @@ def to_train_events(
         else:
             df["service_date"] = pd.to_datetime(default_service_date).date()
 
+    # Heuristic cleanup for placeholder midnight times at endpoints
+    # Identify first/last stops per train if stop_seq is available
+    if "stop_seq" in df.columns and "train_id" in df.columns:
+        try:
+            seq = pd.to_numeric(df["stop_seq"], errors="coerce")
+            df["stop_seq"] = seq
+            grp = df.groupby("train_id")["stop_seq"]
+            is_first = seq.eq(grp.transform("min"))
+            is_last = seq.eq(grp.transform("max"))
+        except Exception:  # robust fallback
+            is_first = pd.Series(False, index=df.index)
+            is_last = pd.Series(False, index=df.index)
+    else:
+        is_first = pd.Series(False, index=df.index)
+        is_last = pd.Series(False, index=df.index)
+
+    # Zero-time strings ("00:00" or "00:00:00") are placeholders in this dataset
+    def _is_zero_time(s: pd.Series) -> pd.Series:
+        return s.astype("string").str.fullmatch(r"\s*0{1,2}:0{2}(:0{2})?\s*", na=False)
+
+    if "sched_arr" in df.columns:
+        zero_arr = _is_zero_time(df["sched_arr"])
+        df.loc[is_first & zero_arr, "sched_arr"] = pd.NA
+    if "sched_dep" in df.columns:
+        zero_dep = _is_zero_time(df["sched_dep"])
+        df.loc[is_last & zero_dep, "sched_dep"] = pd.NA
+
     # Parse times with awareness of service_date
     time_cols = ["sched_arr", "sched_dep", "act_arr", "act_dep"]
     _parse_times_with_service_date(df, time_cols)
+    # Fix cross-midnight sequences so times are monotonically non-decreasing per train
+    _apply_midnight_rollover(df)
 
     # Compute delays
     if "act_arr" in df.columns and "sched_arr" in df.columns:

@@ -19,17 +19,24 @@ __all__ = ["run_all"]
 
 
 def _ensure_series(df: pd.DataFrame, primary: str, fallback: str) -> pd.Series:
-    """Return a Series using *primary* column falling back to *fallback*.
+    """Return a tz-aware datetime Series combining primary and fallback.
 
-    Missing columns yield a ``pd.Series`` full of ``pd.NaT`` values.
+    Ensures a consistent dtype (datetime64[ns, UTC]) to avoid pandas
+    FutureWarning about downcasting on ``fillna``.
     """
 
     if primary in df.columns:
-        ser = df[primary]
+        ser = pd.to_datetime(df[primary], utc=True, errors="coerce")
     else:
-        ser = pd.Series(pd.NaT, index=df.index)
+        ser = pd.Series(pd.NaT, index=df.index, dtype="datetime64[ns, UTC]")
+
     if fallback in df.columns:
-        ser = ser.fillna(df[fallback])
+        fb = pd.to_datetime(df[fallback], utc=True, errors="coerce")
+        ser = ser.fillna(fb)
+
+    # Guarantee dtype
+    if str(ser.dtype) != "datetime64[ns, UTC]":
+        ser = ser.astype("datetime64[ns, UTC]")
     return ser
 
 
@@ -90,17 +97,21 @@ def run_all(
         )
 
     # ------------------------------------------------------------------
-    # Backward time check within each train's sequence
-    order_series = df_slice["station_id"].map(stations_dict)
-    for train_id, grp in df_slice.assign(__order__=order_series).groupby("train_id"):
-        grp = grp.sort_values("__order__")
-        grp_arr = arr.loc[grp.index]
-        grp_dep = dep.loc[grp.index]
+    # Backward time check within each train's temporal sequence
+    # Sort events by ascending reference time (arr if available else dep) to handle both directions
+    ref_time = arr.fillna(dep)
+    for train_id, grp in df_slice.groupby("train_id"):
+        grp_ref = ref_time.loc[grp.index]
+        # Drop rows with no usable time to avoid false positives
+        valid_idx = grp_ref.dropna().sort_values().index
+        grp_sorted = grp.loc[valid_idx]
+        grp_arr = arr.loc[valid_idx]
+        grp_dep = dep.loc[valid_idx]
         prev_dep = None
-        for idx in grp.index:
+        for idx in grp_sorted.index:
             if prev_dep is not None and pd.notna(grp_arr.loc[idx]) and grp_arr.loc[idx] < prev_dep:
                 errors.append(
-                    f"Backward time for train {train_id} arriving at station {grp.loc[idx, 'station_id']}"
+                    f"Backward time for train {train_id} arriving at station {grp_sorted.loc[idx, 'station_id']}"
                 )
             if pd.notna(grp_dep.loc[idx]):
                 prev_dep = grp_dep.loc[idx]
@@ -111,12 +122,14 @@ def run_all(
         errors.append(f"Unknown station id {station}")
 
     # ------------------------------------------------------------------
-    # Missing edge check
+    # Missing edge check based on observed temporal order per train
     edge_set = {(row["u"], row["v"]) for _, row in edges_df.iterrows()}
-    for train_id, grp in df_slice.assign(__order__=order_series).groupby("train_id"):
-        grp = grp.sort_values("__order__")
+    for train_id, grp in df_slice.groupby("train_id"):
+        grp_ref = ref_time.loc[grp.index]
+        valid_idx = grp_ref.dropna().sort_values().index
+        grp_sorted = grp.loc[valid_idx]
         prev_station = None
-        for station in grp["station_id"]:
+        for station in grp_sorted["station_id"]:
             if prev_station is not None:
                 if (prev_station, station) not in edge_set and (station, prev_station) not in edge_set:
                     errors.append(

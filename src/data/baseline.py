@@ -60,8 +60,9 @@ def replay_and_kpis(
         else {}
     )
 
-    df["arr_time"] = pd.NaT
-    df["dep_time"] = pd.NaT
+    # Pre-create tz-aware datetime columns to avoid dtype mismatches on assignment
+    df["arr_time"] = pd.Series(pd.NaT, dtype="datetime64[ns, UTC]", index=df.index)
+    df["dep_time"] = pd.Series(pd.NaT, dtype="datetime64[ns, UTC]", index=df.index)
 
     for train_id, grp in df.groupby("train_id"):
         grp = grp.sort_values("sched_dep", na_position="first")
@@ -87,8 +88,9 @@ def replay_and_kpis(
                 else:
                     dep = row.get("sched_dep") or arr
 
-            df.at[idx, "arr_time"] = arr
-            df.at[idx, "dep_time"] = dep
+            # Ensure assigned values are tz-aware timestamps compatible with column dtype
+            df.at[idx, "arr_time"] = pd.to_datetime(arr, utc=True) if pd.notna(arr) else pd.NaT
+            df.at[idx, "dep_time"] = pd.to_datetime(dep, utc=True) if pd.notna(dep) else pd.NaT
             prev_dep = dep
             prev_station = row["station_id"]
 
@@ -161,9 +163,12 @@ def save(
         station_idx = {sid: i for i, sid in enumerate(stations)}
         for train_id, grp in df_replay.groupby("train_id"):
             grp = grp.sort_values("arr_time")
+            grp_plot = grp.dropna(subset=["arr_time"])  # Matplotlib cannot plot NaT
+            if grp_plot.empty:
+                continue
             ax.plot(
-                grp["arr_time"],
-                grp["station_id"].map(station_idx),
+                grp_plot["arr_time"],
+                grp_plot["station_id"].map(station_idx),
                 marker="o",
                 label=train_id,
             )

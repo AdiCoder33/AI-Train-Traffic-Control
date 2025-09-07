@@ -1,0 +1,5 @@
+{
+  "trains": 42,
+  "avg_arrival_delay_min": -572.626168224299,
+  "p90_arrival_delay_min": 34.100000000000136
+}

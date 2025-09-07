@@ -1,0 +1,66 @@
+# Data Quality Report
+
+## Errors
+None
+
+## Warnings
+- Large headway 185.0 min at station S6424 before train 11003
+- Large headway 182.0 min at station S7854 before train 11003
+- Large headway 200.0 min at station S6424 before train 11086
+- Large headway 263.0 min at station S6850 before train 11085
+- Large headway 247.0 min at station S4506 before train 70104
+- Large headway 264.0 min at station S7080 before train 10103
+- Large headway 291.0 min at station S4173 before train 10103
+- Large headway 230.0 min at station S7550 before train 11085
+- Large headway 260.0 min at station S3676 before train 70104
+- Large headway 195.0 min at station S6424 before train 16345
+- Large headway 181.0 min at station S3569 before train 11004
+- Large headway 257.0 min at station S7854 before train 11004
+- Large headway 292.0 min at station S6267 before train 11004
+- Large headway 1630.0 min at station S3676 before train 12201
+- Large headway 1490.0 min at station S6424 before train 1122
+- Large headway 2875.0 min at station S4506 before train 12202
+- Large headway 3190.0 min at station S4173 before train 16333
+- Large headway 1850.0 min at station S6424 before train 12450
+- Large headway 2906.0 min at station S3676 before train 12202
+- Large headway 244.0 min at station S3676 before train 16333
+- Large headway 5882.0 min at station S6850 before train 12202
+- Large headway 3190.0 min at station S4506 before train 16333
+- Large headway 6578.0 min at station S7550 before train 12450
+- Large headway 4040.0 min at station S6424 before train 12202
+- Large headway 3292.0 min at station S3676 before train 12450
+- Large headway 3310.0 min at station S4506 before train 12450
+- Large headway 10528.0 min at station S6267 before train 10111
+- Large headway 3395.0 min at station S6424 before train 22656
+- Large headway 12010.0 min at station S7854 before train 10111
+- Large headway 4594.0 min at station S3676 before train 22656
+- Large headway 3720.0 min at station S4506 before train 16346
+- Large headway 13390.0 min at station S3569 before train 10111
+- Large headway 845.0 min at station S4506 before train 22656
+- Large headway 2144.0 min at station S3676 before train 16346
+- Large headway 14982.0 min at station S7080 before train 10111
+- Large headway 5065.0 min at station S6424 before train 12742
+- Large headway 9678.0 min at station S7550 before train 16346
+- Large headway 13143.0 min at station S4173 before train 10111
+- Large headway 11666.0 min at station S6850 before train 12742
+- Large headway 1381.0 min at station S4173 before train 16346
+- Large headway 2900.0 min at station S7550 before train 12742
+- Large headway 3280.0 min at station S6424 before train 16346
+- Large headway 425.0 min at station S6424 before train 1119
+- Large headway 1625.0 min at station S7550 before train 10111
+- Large headway 1440.0 min at station S6424 before train 1196
+- Large headway 7834.0 min at station S3569 before train 1119
+- Large headway 7448.0 min at station S3676 before train 10111
+- Large headway 1456.0 min at station S3569 before train 1196
+- Large headway 5006.0 min at station S4173 before train 1119
+- Large headway 9595.0 min at station S4506 before train 10111
+- Large headway 1454.0 min at station S4173 before train 1196
+- Large headway 3509.0 min at station S7550 before train 1119
+- Large headway 7853.0 min at station S6850 before train 1196
+- Large headway 3542.0 min at station S3676 before train 1119
+- Large headway 2925.0 min at station S4506 before train 16334
+- Large headway 2894.0 min at station S7550 before train 1196
+- Large headway 2372.0 min at station S3676 before train 16334
+- Large headway 568.0 min at station S3676 before train 1196
+- Large headway 5434.0 min at station S4173 before train 16334
+- Large headway 10080.0 min at station S6424 before train 16334

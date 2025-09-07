@@ -54,16 +54,27 @@ def build(
         return pd.DataFrame(columns=edges_cols), nodes_df
 
     df = df_slice.copy()
-    df["__order__"] = df["station_id"].map(stations_dict)
-    df = df.sort_values(["train_id", "__order__"])
+    # Build reference departure and arrival times using available columns
+    t_dep = pd.Series(pd.NaT, dtype="datetime64[ns, UTC]", index=df.index)
+    for c in ("act_dep", "sched_dep", "act_arr", "sched_arr"):
+        if c in df.columns:
+            t_dep = t_dep.fillna(df[c])
+    t_arr = pd.Series(pd.NaT, dtype="datetime64[ns, UTC]", index=df.index)
+    for c in ("act_arr", "sched_arr", "act_dep", "sched_dep"):
+        if c in df.columns:
+            t_arr = t_arr.fillna(df[c])
 
-    # Identify consecutive station visits for each train
+    df["__t_dep__"] = t_dep
+    df["__t_arr__"] = t_arr
+    # Sort by temporal order per train to support both directions
+    df = df.sort_values(["train_id", "__t_dep__", "__t_arr__"])  
+
+    # Identify consecutive station visits for each train in time order
     df["next_station"] = df.groupby("train_id")["station_id"].shift(-1)
-    df["next_order"] = df.groupby("train_id")["__order__"].shift(-1)
-    df["next_arr"] = df.groupby("train_id")["sched_arr"].shift(-1)
-    df["run_time_min"] = (df["next_arr"] - df["sched_dep"]).dt.total_seconds() / 60
+    df["next_arr"] = df.groupby("train_id")["__t_arr__"].shift(-1)
+    df["run_time_min"] = (df["next_arr"] - df["__t_dep__"]).dt.total_seconds() / 60
 
-    edges = df[(df["next_station"].notna()) & ((df["next_order"] - df["__order__"]).abs() == 1)].copy()
+    edges = df[df["next_station"].notna()].copy()
     edges["u"] = edges["station_id"]
     edges["v"] = edges["next_station"]
 
@@ -72,8 +83,8 @@ def build(
         edges.groupby(["u", "v"])["run_time_min"].median().reset_index(name="min_run_time")
     )
 
-    # 90th percentile headway based on scheduled departures
-    dep_times = edges[["u", "v", "sched_dep"]].rename(columns={"sched_dep": "dep_time"})
+    # 90th percentile headway based on temporal departure reference
+    dep_times = edges[["u", "v", "__t_dep__"]].rename(columns={"__t_dep__": "dep_time"})
     dep_times = dep_times.sort_values("dep_time")
     dep_times["headway"] = (
         dep_times.groupby(["u", "v"])["dep_time"].diff().dt.total_seconds() / 60
