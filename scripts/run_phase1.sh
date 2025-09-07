@@ -1,13 +1,14 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-if [[ $# -ne 2 ]]; then
-  echo "Usage: $0 <corridor_id> <service_date YYYY-MM-DD>" >&2
+if [[ $# -lt 2 || $# -gt 3 ]]; then
+  echo "Usage: $0 <corridor_id> <service_date YYYY-MM-DD> [csv_glob_pattern]" >&2
   exit 1
 fi
 
 CORRIDOR="$1"
 DATE="$2"
+CSV_PATTERN="${3:-Train_details*.csv}"
 ARTIFACT_DIR="artifacts/$CORRIDOR/$DATE"
 STATIONS_FILE="data/${CORRIDOR}_stations.txt"
 
@@ -22,13 +23,14 @@ fi
 
 echo "Using stations from $STATIONS_FILE"
 
-echo "[1/6] Loading raw data"
-python - "$ARTIFACT_DIR" <<'PYTHON'
+echo "[1/6] Loading raw data (pattern: $CSV_PATTERN)"
+python - "$ARTIFACT_DIR" "$CSV_PATTERN" <<'PYTHON'
 import sys
 from src.data.loader import load_raw
 import pandas as pd
 out_dir = sys.argv[1]
-df = load_raw()
+pattern = sys.argv[2]
+df = load_raw(pattern=pattern)
 df.to_parquet(f"{out_dir}/raw.parquet", index=False)
 PYTHON
 

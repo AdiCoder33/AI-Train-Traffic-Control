@@ -19,12 +19,14 @@ __all__ = ["load_raw"]
 logger = logging.getLogger(__name__)
 
 
-def _iter_csv_files(data_dir: Path) -> Iterable[Path]:
-    """Yield CSV files within ``data_dir`` sorted by name."""
-    return sorted(data_dir.glob("*.csv"))
+def _iter_csv_files(data_dir: Path, pattern: str) -> Iterable[Path]:
+    """Yield CSV files within ``data_dir`` matching ``pattern`` sorted by name."""
+    return sorted(data_dir.glob(pattern))
 
 
-def load_raw(data_dir: str | Path = Path("data/raw")) -> pd.DataFrame:
+def load_raw(
+    data_dir: str | Path = Path("data/raw"), *, pattern: str = "*.csv"
+) -> pd.DataFrame:
     """Load and concatenate all raw CSV files.
 
     Parameters
@@ -41,7 +43,7 @@ def load_raw(data_dir: str | Path = Path("data/raw")) -> pd.DataFrame:
     data_dir = Path(data_dir)
     frames: list[pd.DataFrame] = []
 
-    for csv_path in _iter_csv_files(data_dir):
+    for csv_path in _iter_csv_files(data_dir, pattern):
         # Read as strings to avoid mixed-type Arrow write errors; trim whitespace
         df = pd.read_csv(
             csv_path,

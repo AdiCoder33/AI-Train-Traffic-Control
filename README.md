@@ -147,5 +147,29 @@ Generate the full codebase with stubs, docstrings, and a minimal demo run that w
 - Install deps: `pip install -r requirements.txt`
 - Place raw CSVs under `data/raw/`
 - Prepare a stations file like `data/demo_corridor_stations.txt` (one station name or ID per line)
-- Run: `./scripts/run_phase1.ps1 demo_corridor 2024-01-01`
+ - Run: `./scripts/run_phase1.ps1 demo_corridor 2024-01-01`
+ - Use real dataset only (optional third arg):
+   - `./scripts/run_phase1.ps1 konkan_corridor 2024-01-01 'Train_details*.csv'`
 - Artifacts appear under `artifacts/<corridor>/<date>/` including `events.parquet`, `section_edges.parquet`, `kpis.json`, and `baseline_gantt.png`.
+
+## Phase 1 Status
+- Pipeline: `scripts/run_phase1.(sh|ps1)` runs load → normalize → slice → graph → baseline → DQ and writes artifacts per corridor/date.
+- Normalization: `src/data/normalize.py` now
+  - accepts `default_service_date` and always outputs `service_date`;
+  - parses time-of-day with the date to UTC timestamps (no parser warnings);
+  - maps station names/codes to stable `station_id` via `station_map.csv`;
+  - handles duplicate station columns safely; extended column aliases.
+- Loader: `src/data/loader.py` reads CSVs as strings with `utf-8-sig` and trims headers to avoid Parquet dtype issues.
+- Windows: added `scripts/run_phase1.ps1` with fail-fast checks after each step.
+- Artifacts: edges/nodes parquet, events/events_clean parquet, `kpis.json`, `baseline_gantt.png`, `dq_report.md`, and `stations.json` under `artifacts/<corridor>/<date>/`.
+- Tests: `pytest -q` runs `tests/test_normalize.py` (column mapping + delay calc).
+- Demo: `data/konkan_corridor_stations.txt` matches the included Indian Railways sample.
+
+### How To Validate
+- Run (Windows): `./scripts/run_phase1.ps1 konkan_corridor 2024-01-01`
+- Inspect: `artifacts/konkan_corridor/2024-01-01/kpis.json`, `section_edges.parquet`, `baseline_gantt.png`, `dq_report.md`.
+
+### Known Limitations (Phase 1)
+- Graph uses single-track/platform defaults; overtakes and capacities simplified.
+- Baseline replays from actuals when available, otherwise scheduled + medians.
+- Station lists must match the normalized data; use `src/data/station_map.csv` for reference.

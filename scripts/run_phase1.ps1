@@ -1,6 +1,7 @@
 param(
   [Parameter(Position=0, Mandatory=$true)][string]$Corridor,
-  [Parameter(Position=1, Mandatory=$true)][string]$Date
+  [Parameter(Position=1, Mandatory=$true)][string]$Date,
+  [Parameter(Position=2, Mandatory=$false)][string]$CsvPattern = 'Train_details*.csv'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -24,8 +25,8 @@ function Assert-LastExit {
 }
 
 # [1/6] Load raw data
-Write-Host "[1/6] Loading raw data"
-python -c "from src.data.loader import load_raw; import pandas as pd; df=load_raw(); df.to_parquet(r'$ArtifactDir/raw.parquet', index=False)"
+Write-Host "[1/6] Loading raw data (pattern: $CsvPattern)"
+python -c "import sys; from src.data.loader import load_raw; import pandas as pd; pattern=sys.argv[1]; df=load_raw(pattern=pattern); df.to_parquet(r'$ArtifactDir/raw.parquet', index=False)" $CsvPattern
 Assert-LastExit "Load raw data"
 
 # [2/6] Normalize dataset
