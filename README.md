@@ -282,3 +282,13 @@ Notes:
 - Deterministic heuristic: sorts risks by severity/lead/priority and proposes minimal safe holds for headway/block capacity; platform risks use short holds until platform data is enriched.
 - Safety check: actions are constructed to satisfy headway vs the immediate predecessor; full replay verification remains in Phase 2 apply.
 - MILP/CP-SAT hooks can be added; install OR‑Tools/PuLP to switch to exact optimization later.
+
+### Apply + Validate (Phase 4)
+Applies `rec_plan.json` holds to the twin and verifies outcome in the horizon.
+
+Run (Windows):
+- `./scripts/apply_plan.ps1 <scope_id> <YYYY-MM-DD> [HorizonMin=60] [T0_ISO]`
+
+Outputs:
+- `plan_apply_report.json` — applied_risks, baseline_risks, risk_reduction, validation_after (post-enforcement overlap/headway checks), wait_minutes_after
+- Optionally `applied_block_occupancy.parquet` if enabled in the code

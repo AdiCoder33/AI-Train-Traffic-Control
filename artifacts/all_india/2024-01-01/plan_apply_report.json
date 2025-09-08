@@ -1,0 +1,13 @@
+{
+  "applied_risks": 32,
+  "validation_after": {
+    "post_overlap_violations": 0,
+    "headway_violations": 0,
+    "critical_min_lead_min": null,
+    "ok_post_no_overlap": true,
+    "ok_headway_enforced": true
+  },
+  "wait_minutes_after": 8554047949.49975,
+  "baseline_risks": 24,
+  "risk_reduction": -8
+}
