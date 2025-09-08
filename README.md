@@ -254,3 +254,31 @@ Outputs (artifacts):
 Notes:
 - Platform risks fall back to derived dwell windows if a waiting ledger or explicit platform occupancy is unavailable.
 - Mitigation previews include ETA deltas for 2/5 min holds (lightweight propagation along the affected train only).
+
+## Phase 4: Real‑Time Optimization (Heuristic Baseline)
+Proposes safe, explainable controller actions (holds now; hooks for platform reassignment/overtake later) over a rolling horizon, using the digital twin state and risk radar.
+
+Run (Windows):
+- `./scripts/run_risk.ps1 <scope_id> <YYYY-MM-DD> [HorizonMin=60] [T0_ISO]`  (ensure radar exists)
+- `./scripts/run_opt.ps1 <scope_id> <YYYY-MM-DD> [HorizonMin=60] [T0_ISO]`
+
+Run (Linux/macOS):
+- `./scripts/run_risk.sh <scope_id> <YYYY-MM-DD> [HorizonMin=60] [T0_ISO]`
+- `./scripts/run_opt.sh <scope_id> <YYYY-MM-DD> [HorizonMin=60] [T0_ISO]`
+
+Inputs:
+- `section_edges.parquet`, `section_nodes.parquet`
+- `national_block_occupancy.parquet` (or `block_occupancy.parquet`)
+- `conflict_radar.json` (from Phase 3)
+- Optional: priorities mapping (future)
+
+Outputs:
+- `rec_plan.json` — ordered actions (HOLD with minutes and location, reason, why)
+- `alt_options.json` — top-2 alternatives per risk (2 vs 5 min holds)
+- `plan_metrics.json` — actions count, conflicts targeted, expected reduction
+- `audit_log.json` — runtime, strategy, horizon, t0
+
+Notes:
+- Deterministic heuristic: sorts risks by severity/lead/priority and proposes minimal safe holds for headway/block capacity; platform risks use short holds until platform data is enriched.
+- Safety check: actions are constructed to satisfy headway vs the immediate predecessor; full replay verification remains in Phase 2 apply.
+- MILP/CP-SAT hooks can be added; install OR‑Tools/PuLP to switch to exact optimization later.

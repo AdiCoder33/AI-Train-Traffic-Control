@@ -1,0 +1,362 @@
+[
+  {
+    "train_id": "64420",
+    "type": "HOLD",
+    "at_station": "S2516",
+    "minutes": 3.0,
+    "reason": "platform_overflow",
+    "why": "Reduce concurrent dwells at S2516"
+  },
+  {
+    "train_id": "64076",
+    "type": "HOLD",
+    "at_station": "S5496",
+    "minutes": 3.0,
+    "reason": "platform_overflow",
+    "why": "Reduce concurrent dwells at S5496"
+  },
+  {
+    "train_id": "11043",
+    "type": "HOLD",
+    "at_station": "S4451",
+    "minutes": 3.0,
+    "reason": "platform_overflow",
+    "why": "Reduce concurrent dwells at S4451"
+  },
+  {
+    "train_id": "1705",
+    "type": "HOLD",
+    "at_station": "S0654",
+    "minutes": 3.0,
+    "reason": "platform_overflow",
+    "why": "Reduce concurrent dwells at S0654"
+  },
+  {
+    "train_id": "22865",
+    "type": "HOLD",
+    "at_station": "S4451",
+    "minutes": 3.0,
+    "reason": "platform_overflow",
+    "why": "Reduce concurrent dwells at S4451"
+  },
+  {
+    "train_id": "22848",
+    "type": "HOLD",
+    "at_station": "S4451",
+    "minutes": 2.0,
+    "reason": "block_capacity",
+    "block_id": "B15364",
+    "why": "Resolve block_capacity on B15364 vs 12879"
+  },
+  {
+    "train_id": "22848",
+    "type": "HOLD",
+    "at_station": "S4451",
+    "minutes": 5,
+    "reason": "headway",
+    "block_id": "B15364",
+    "why": "Resolve headway on B15364 vs 12879"
+  },
+  {
+    "train_id": "22848",
+    "type": "HOLD",
+    "at_station": "S4451",
+    "minutes": 2.0,
+    "reason": "block_capacity",
+    "block_id": "B15364",
+    "why": "Resolve block_capacity on B15364 vs 12879, 12811"
+  },
+  {
+    "train_id": "22848",
+    "type": "HOLD",
+    "at_station": "S4451",
+    "minutes": 5,
+    "reason": "headway",
+    "block_id": "B15364",
+    "why": "Resolve headway on B15364 vs 12811"
+  },
+  {
+    "train_id": "43001",
+    "type": "HOLD",
+    "at_station": "S5087",
+    "minutes": 2.0,
+    "reason": "block_capacity",
+    "block_id": "B17558",
+    "why": "Resolve block_capacity on B17558 vs 42001"
+  },
+  {
+    "train_id": "43001",
+    "type": "HOLD",
+    "at_station": "S5087",
+    "minutes": 5,
+    "reason": "headway",
+    "block_id": "B17558",
+    "why": "Resolve headway on B17558 vs 42001"
+  },
+  {
+    "train_id": "95013",
+    "type": "HOLD",
+    "at_station": "S3486",
+    "minutes": 3.0,
+    "reason": "platform_overflow",
+    "why": "Reduce concurrent dwells at S3486"
+  },
+  {
+    "train_id": "22848",
+    "type": "HOLD",
+    "at_station": "S4451",
+    "minutes": 2.0,
+    "reason": "block_capacity",
+    "block_id": "B15364",
+    "why": "Resolve block_capacity on B15364 vs 12879, 12811, 11043"
+  },
+  {
+    "train_id": "22848",
+    "type": "HOLD",
+    "at_station": "S4451",
+    "minutes": 5,
+    "reason": "headway",
+    "block_id": "B15364",
+    "why": "Resolve headway on B15364 vs 11043"
+  },
+  {
+    "train_id": "22865",
+    "type": "HOLD",
+    "at_station": "S4451",
+    "minutes": 2.0,
+    "reason": "block_capacity",
+    "block_id": "B15364",
+    "why": "Resolve block_capacity on B15364 vs 22848, 12879, 12811, 11043"
+  },
+  {
+    "train_id": "22865",
+    "type": "HOLD",
+    "at_station": "S4451",
+    "minutes": 5,
+    "reason": "headway",
+    "block_id": "B15364",
+    "why": "Resolve headway on B15364 vs 11043"
+  },
+  {
+    "train_id": "96651",
+    "type": "HOLD",
+    "at_station": "S3486",
+    "minutes": 3.0,
+    "reason": "platform_overflow",
+    "why": "Reduce concurrent dwells at S3486"
+  },
+  {
+    "train_id": "15068",
+    "type": "HOLD",
+    "at_station": "S0654",
+    "minutes": 3.0,
+    "reason": "platform_overflow",
+    "why": "Reduce concurrent dwells at S0654"
+  },
+  {
+    "train_id": "19601",
+    "type": "HOLD",
+    "at_station": "S7732",
+    "minutes": 2.0,
+    "reason": "block_capacity",
+    "block_id": "B26822",
+    "why": "Resolve block_capacity on B26822 vs 12316"
+  },
+  {
+    "train_id": "19601",
+    "type": "HOLD",
+    "at_station": "S7732",
+    "minutes": 5,
+    "reason": "headway",
+    "block_id": "B26822",
+    "why": "Resolve headway on B26822 vs 12316"
+  },
+  {
+    "train_id": "11093",
+    "type": "HOLD",
+    "at_station": "S1774",
+    "minutes": 2.0,
+    "reason": "block_capacity",
+    "block_id": "B6183",
+    "why": "Resolve block_capacity on B6183 vs 1011"
+  },
+  {
+    "train_id": "11093",
+    "type": "HOLD",
+    "at_station": "S1774",
+    "minutes": 5,
+    "reason": "headway",
+    "block_id": "B6183",
+    "why": "Resolve headway on B6183 vs 1011"
+  },
+  {
+    "train_id": "11025",
+    "type": "HOLD",
+    "at_station": "S1176",
+    "minutes": 3.0,
+    "reason": "platform_overflow",
+    "why": "Reduce concurrent dwells at S1176"
+  },
+  {
+    "train_id": "9433",
+    "type": "HOLD",
+    "at_station": "S0654",
+    "minutes": 3.0,
+    "reason": "platform_overflow",
+    "why": "Reduce concurrent dwells at S0654"
+  },
+  {
+    "train_id": "11093",
+    "type": "HOLD",
+    "at_station": "S1792",
+    "minutes": 2.0,
+    "reason": "block_capacity",
+    "block_id": "B6287",
+    "why": "Resolve block_capacity on B6287 vs 11003"
+  },
+  {
+    "train_id": "11093",
+    "type": "HOLD",
+    "at_station": "S1792",
+    "minutes": 5,
+    "reason": "headway",
+    "block_id": "B6287",
+    "why": "Resolve headway on B6287 vs 11003"
+  },
+  {
+    "train_id": "98003",
+    "type": "HOLD",
+    "at_station": "S1774",
+    "minutes": 2.0,
+    "reason": "block_capacity",
+    "block_id": "B6190",
+    "why": "Resolve block_capacity on B6190 vs 98001"
+  },
+  {
+    "train_id": "98003",
+    "type": "HOLD",
+    "at_station": "S1774",
+    "minutes": 5,
+    "reason": "headway",
+    "block_id": "B6190",
+    "why": "Resolve headway on B6190 vs 98001"
+  },
+  {
+    "train_id": "96227",
+    "type": "HOLD",
+    "at_station": "S3486",
+    "minutes": 3.0,
+    "reason": "platform_overflow",
+    "why": "Reduce concurrent dwells at S3486"
+  },
+  {
+    "train_id": "19808",
+    "type": "HOLD",
+    "at_station": "S3075",
+    "minutes": 3.0,
+    "reason": "platform_overflow",
+    "why": "Reduce concurrent dwells at S3075"
+  },
+  {
+    "train_id": "16616",
+    "type": "HOLD",
+    "at_station": "S1766",
+    "minutes": 3.0,
+    "reason": "platform_overflow",
+    "why": "Reduce concurrent dwells at S1766"
+  },
+  {
+    "train_id": "2515",
+    "type": "HOLD",
+    "at_station": "S7690",
+    "minutes": 2.0,
+    "reason": "block_capacity",
+    "block_id": "B26689",
+    "why": "Resolve block_capacity on B26689 vs 22653"
+  },
+  {
+    "train_id": "2515",
+    "type": "HOLD",
+    "at_station": "S7690",
+    "minutes": 5,
+    "reason": "headway",
+    "block_id": "B26689",
+    "why": "Resolve headway on B26689 vs 22653"
+  },
+  {
+    "train_id": "96341",
+    "type": "HOLD",
+    "at_station": "S3486",
+    "minutes": 3.0,
+    "reason": "platform_overflow",
+    "why": "Reduce concurrent dwells at S3486"
+  },
+  {
+    "train_id": "98005",
+    "type": "HOLD",
+    "at_station": "S1774",
+    "minutes": 2.0,
+    "reason": "block_capacity",
+    "block_id": "B6190",
+    "why": "Resolve block_capacity on B6190 vs 98001, 98003"
+  },
+  {
+    "train_id": "98005",
+    "type": "HOLD",
+    "at_station": "S1774",
+    "minutes": 5,
+    "reason": "headway",
+    "block_id": "B6190",
+    "why": "Resolve headway on B6190 vs 98003"
+  },
+  {
+    "train_id": "69106",
+    "type": "HOLD",
+    "at_station": "S0083",
+    "minutes": 3.0,
+    "reason": "platform_overflow",
+    "why": "Reduce concurrent dwells at S0083"
+  },
+  {
+    "train_id": "96653",
+    "type": "HOLD",
+    "at_station": "S3486",
+    "minutes": 3.0,
+    "reason": "platform_overflow",
+    "why": "Reduce concurrent dwells at S3486"
+  },
+  {
+    "train_id": "96121",
+    "type": "HOLD",
+    "at_station": "S3486",
+    "minutes": 3.0,
+    "reason": "platform_overflow",
+    "why": "Reduce concurrent dwells at S3486"
+  },
+  {
+    "train_id": "96119",
+    "type": "HOLD",
+    "at_station": "S3486",
+    "minutes": 3.0,
+    "reason": "platform_overflow",
+    "why": "Reduce concurrent dwells at S3486"
+  },
+  {
+    "train_id": "22655",
+    "type": "HOLD",
+    "at_station": "S7690",
+    "minutes": 2.0,
+    "reason": "block_capacity",
+    "block_id": "B26689",
+    "why": "Resolve block_capacity on B26689 vs 22653"
+  },
+  {
+    "train_id": "22655",
+    "type": "HOLD",
+    "at_station": "S7690",
+    "minutes": 5,
+    "reason": "headway",
+    "block_id": "B26689",
+    "why": "Resolve headway on B26689 vs 22653"
+  }
+]

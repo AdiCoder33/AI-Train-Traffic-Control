@@ -1,0 +1,7 @@
+{
+  "strategy": "heuristic",
+  "runtime_sec": 6.534,
+  "max_hold_min": 5,
+  "horizon_min": 60,
+  "t0": "2024-01-01 00:03:00+00:00"
+}
