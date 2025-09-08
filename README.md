@@ -200,15 +200,18 @@ Generate the full codebase with stubs, docstrings, and a minimal demo run that w
 
 ### One-Shot Wrapper (Linux/macOS)
 - Run: `./scripts/run_all.sh <corridor_id> <YYYY-MM-DD> [csv_glob_pattern]`
+
 ## Nationwide Baseline Replay
 The national simulator replays trains across all corridors, enforcing block capacity, headways, platforms, and dwell. It emits national block/platform timelines, a waiting ledger, and KPIs.
 
+Inputs (under `artifacts/<scope>/<date>/`):
 - `events_clean.parquet` (all-India per train×station for the day)
 - `section_nodes.parquet` (all stations with `platforms`, optional `min_dwell_min`)
 - `section_edges.parquet` (all blocks with `min_run_time`, `headway`, `capacity`, `block_id`)
 
 Run (Windows):
 - `./scripts/run_national.ps1 all_india 2024-01-01`
+
 Run (Linux/macOS):
 - `./scripts/run_national.sh all_india 2024-01-01`
 
