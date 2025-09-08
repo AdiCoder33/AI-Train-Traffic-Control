@@ -1,0 +1,15 @@
+{
+  "hops_total": 182,
+  "hops_kept": 182,
+  "hops_skipped_missing_edge": 0,
+  "windows_built": 182,
+  "windows_inferred": 0,
+  "source_counts": {
+    "actual": 0,
+    "scheduled": 182,
+    "hybrid": 0,
+    "inferred": 0
+  },
+  "headway_shifts_applied": 138,
+  "headway_total_min": 2537072.499999849
+}

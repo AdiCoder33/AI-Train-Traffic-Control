@@ -1,0 +1,7 @@
+{
+  "otp_exit_pct": 9.523809523809524,
+  "avg_exit_delay_min": 35932.94285714286,
+  "p90_exit_delay_min": 80162.65,
+  "conflicts_pre_headway": 18,
+  "trains_served": 42
+}

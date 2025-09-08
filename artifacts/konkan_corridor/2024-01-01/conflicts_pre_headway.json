@@ -1,0 +1,185 @@
+{
+  "count": 18,
+  "samples": [
+    {
+      "block_id": "B0000",
+      "u": "S3569",
+      "v": "S4173",
+      "train_prev": "1119",
+      "train_next": "1196",
+      "overlap_start": "2024-01-17 18:12:00+00:00",
+      "overlap_end": "2024-01-17 18:20:00+00:00",
+      "overlap_min": 8.0
+    },
+    {
+      "block_id": "B0001",
+      "u": "S3569",
+      "v": "S6424",
+      "train_prev": "1120",
+      "train_next": "1122",
+      "overlap_start": "2024-01-02 00:12:00+00:00",
+      "overlap_end": "2024-01-02 01:05:00+00:00",
+      "overlap_min": 53.0
+    },
+    {
+      "block_id": "B0006",
+      "u": "S3676",
+      "v": "S4506",
+      "train_prev": "11085",
+      "train_next": "10103",
+      "overlap_start": "2024-01-01 17:14:00+00:00",
+      "overlap_end": "2024-01-01 17:30:00+00:00",
+      "overlap_min": 16.0
+    },
+    {
+      "block_id": "B0006",
+      "u": "S3676",
+      "v": "S4506",
+      "train_prev": "10103",
+      "train_next": "70101",
+      "overlap_start": "2024-01-01 18:08:00+00:00",
+      "overlap_end": "2024-01-01 18:45:00+00:00",
+      "overlap_min": 37.0
+    },
+    {
+      "block_id": "B0006",
+      "u": "S3676",
+      "v": "S4506",
+      "train_prev": "22654",
+      "train_next": "22656",
+      "overlap_start": "2024-01-10 17:36:00+00:00",
+      "overlap_end": "2024-01-11 18:40:00+00:00",
+      "overlap_min": 1504.0
+    },
+    {
+      "block_id": "B0007",
+      "u": "S3676",
+      "v": "S6424",
+      "train_prev": "22653",
+      "train_next": "22655",
+      "overlap_start": "2024-01-01 17:54:00+00:00",
+      "overlap_end": "2024-01-01 20:55:00+00:00",
+      "overlap_min": 181.0
+    },
+    {
+      "block_id": "B0017",
+      "u": "S4506",
+      "v": "S3676",
+      "train_prev": "11086",
+      "train_next": "50108",
+      "overlap_start": "2024-01-01 06:15:00+00:00",
+      "overlap_end": "2024-01-01 06:25:00+00:00",
+      "overlap_min": 10.0
+    },
+    {
+      "block_id": "B0017",
+      "u": "S4506",
+      "v": "S3676",
+      "train_prev": "22653",
+      "train_next": "22655",
+      "overlap_start": "2024-01-01 17:20:00+00:00",
+      "overlap_end": "2024-01-01 17:52:00+00:00",
+      "overlap_min": 32.0
+    },
+    {
+      "block_id": "B0017",
+      "u": "S4506",
+      "v": "S3676",
+      "train_prev": "50102",
+      "train_next": "128",
+      "overlap_start": "2024-01-01 19:40:00+00:00",
+      "overlap_end": "2024-01-01 19:47:00+00:00",
+      "overlap_min": 7.0
+    },
+    {
+      "block_id": "B0020",
+      "u": "S6267",
+      "v": "S6424",
+      "train_prev": "11004",
+      "train_next": "10112",
+      "overlap_start": "2024-01-01 21:54:00+00:00",
+      "overlap_end": "2024-01-01 22:30:00+00:00",
+      "overlap_min": 36.0
+    },
+    {
+      "block_id": "B0020",
+      "u": "S6267",
+      "v": "S6424",
+      "train_prev": "10112",
+      "train_next": "50102",
+      "overlap_start": "2024-01-01 22:34:00+00:00",
+      "overlap_end": "2024-01-01 23:00:00+00:00",
+      "overlap_min": 26.0
+    },
+    {
+      "block_id": "B0020",
+      "u": "S6267",
+      "v": "S6424",
+      "train_prev": "50102",
+      "train_next": "128",
+      "overlap_start": "2024-01-01 22:58:00+00:00",
+      "overlap_end": "2024-01-01 23:52:00+00:00",
+      "overlap_min": 54.0
+    },
+    {
+      "block_id": "B0022",
+      "u": "S6424",
+      "v": "S3569",
+      "train_prev": "1119",
+      "train_next": "1196",
+      "overlap_start": "2024-01-16 16:15:00+00:00",
+      "overlap_end": "2024-01-16 17:54:00+00:00",
+      "overlap_min": 99.0
+    },
+    {
+      "block_id": "B0023",
+      "u": "S6424",
+      "v": "S3676",
+      "train_prev": "22654",
+      "train_next": "22656",
+      "overlap_start": "2024-01-09 14:05:00+00:00",
+      "overlap_end": "2024-01-10 17:34:00+00:00",
+      "overlap_min": 1649.0
+    },
+    {
+      "block_id": "B0032",
+      "u": "S6850",
+      "v": "S7550",
+      "train_prev": "12742",
+      "train_next": "10111",
+      "overlap_start": "2024-01-14 08:23:00+00:00",
+      "overlap_end": "2024-01-15 06:00:00+00:00",
+      "overlap_min": 1297.0
+    },
+    {
+      "block_id": "B0038",
+      "u": "S7550",
+      "v": "S6850",
+      "train_prev": "11086",
+      "train_next": "50108",
+      "overlap_start": "2024-01-01 07:11:00+00:00",
+      "overlap_end": "2024-01-01 07:22:00+00:00",
+      "overlap_min": 11.0
+    },
+    {
+      "block_id": "B0038",
+      "u": "S7550",
+      "v": "S6850",
+      "train_prev": "50102",
+      "train_next": "128",
+      "overlap_start": "2024-01-01 20:42:00+00:00",
+      "overlap_end": "2024-01-01 20:49:00+00:00",
+      "overlap_min": 7.0
+    },
+    {
+      "block_id": "B0038",
+      "u": "S7550",
+      "v": "S6850",
+      "train_prev": "128",
+      "train_next": "12741",
+      "overlap_start": "2024-01-01 20:44:00+00:00",
+      "overlap_end": "2024-01-01 21:12:00+00:00",
+      "overlap_min": 28.0
+    }
+  ]
+}

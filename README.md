@@ -152,6 +152,21 @@ Generate the full codebase with stubs, docstrings, and a minimal demo run that w
    - `./scripts/run_phase1.ps1 konkan_corridor 2024-01-01 'Train_details*.csv'`
 - Artifacts appear under `artifacts/<corridor>/<date>/` including `events.parquet`, `section_edges.parquet`, `kpis.json`, and `baseline_gantt.png`.
 
+### Block-Level View (Windows)
+- After Phase 1 completes for a corridor/date, generate block occupancy + safety view:
+  - `./scripts/run_block_view.ps1 <corridor_id> <YYYY-MM-DD>`
+- Outputs under `artifacts/<corridor>/<date>/`:
+  - `block_occupancy.parquet` (post-headway, per train×block with `entry_time`, `exit_time`, `headway_applied_min`, `delay_min`, `source`)
+  - `block_occupancy_raw.parquet` (pre-headway `entry_time_raw`, `exit_time_raw`)
+  - `conflicts_pre_headway.json` (count + sample overlaps)
+  - `kpis_block.json` (OTP %, avg/p90 exit delay, conflicts_pre_headway, trains_served)
+  - `block_log.json` (hops processed, inferred windows, headway shifts total minutes)
+
+### One-Shot Wrapper (Windows)
+- Run end-to-end (Phase 1 + Block View) while keeping steps modular:
+  - `./scripts/run_all.ps1 <corridor_id> <YYYY-MM-DD> [csv_glob_pattern]`
+  - Example: `./scripts/run_all.ps1 konkan_corridor 2024-01-01 'Train_details*.csv'`
+
 ## Phase 1 Status
 - Pipeline: `scripts/run_phase1.(sh|ps1)` runs load → normalize → slice → graph → baseline → DQ and writes artifacts per corridor/date.
 - Normalization: `src/data/normalize.py` now
@@ -173,3 +188,15 @@ Generate the full codebase with stubs, docstrings, and a minimal demo run that w
 - Graph uses single-track/platform defaults; overtakes and capacities simplified.
 - Baseline replays from actuals when available, otherwise scheduled + medians.
 - Station lists must match the normalized data; use `src/data/station_map.csv` for reference.
+ - Block-level view assumes one train per block; run-time after headway uses observed duration when available else `min_run_time`.
+
+## Phase 1 Pipeline (Linux/macOS)
+- Equivalent script exists: `./scripts/run_phase1.sh`.
+
+### Block-Level View (Linux/macOS)
+- After Phase 1 completes for a corridor/date:
+  - `./scripts/run_block_view.sh <corridor_id> <YYYY-MM-DD>`
+  - Produces the same artifacts as on Windows.
+
+### One-Shot Wrapper (Linux/macOS)
+- Run: `./scripts/run_all.sh <corridor_id> <YYYY-MM-DD> [csv_glob_pattern]`
