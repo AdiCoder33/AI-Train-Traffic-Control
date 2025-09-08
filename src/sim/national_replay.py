@@ -104,24 +104,32 @@ def run(events_df: pd.DataFrame, graph: SectionGraph) -> SimResult:
         return start, wait_min
 
     # Iterate trains in chronological order of their initial departure
-    dep0 = (
-        _to_utc(df.get("act_dep")).fillna(_to_utc(df.get("sched_dep"))).groupby(df["train_id"]).min()
-    )
+    # Robust initial time per train: earliest of any known time columns
+    t0 = _to_utc(df.get("act_dep"))
+    for c in ("sched_dep", "act_arr", "sched_arr"):
+        ser = _to_utc(df.get(c))
+        if len(t0) == 0:
+            t0 = ser
+        else:
+            t0 = t0.fillna(ser)
+    dep0 = t0.groupby(df["train_id"]).min()
     for train_id in dep0.sort_values().index:
         hops = itins.get(train_id)
         if not hops:
             continue
         grp = _sort_group(df[df["train_id"] == train_id])
-        # Station-wise schedule/actual for departures and arrivals
-        sched_dep_map = _to_utc(grp.set_index("station_id")["sched_dep"]) if "sched_dep" in grp.columns else pd.Series(dtype="datetime64[ns, UTC]")
-        act_dep_map = _to_utc(grp.set_index("station_id")["act_dep"]) if "act_dep" in grp.columns else pd.Series(dtype="datetime64[ns, UTC]")
-        sched_arr_map = _to_utc(grp.set_index("station_id")["sched_arr"]) if "sched_arr" in grp.columns else pd.Series(dtype="datetime64[ns, UTC]")
-        act_arr_map = _to_utc(grp.set_index("station_id")["act_arr"]) if "act_arr" in grp.columns else pd.Series(dtype="datetime64[ns, UTC]")
+        # Deduplicate by station to ensure scalar lookups per station_id
+        grp_unique = grp.drop_duplicates(subset=["station_id"], keep="first")
+        # Station-wise schedule/actual for departures and arrivals (scalar maps)
+        sched_dep_map = _to_utc(grp_unique.set_index("station_id")["sched_dep"]) if "sched_dep" in grp_unique.columns else pd.Series(dtype="datetime64[ns, UTC]")
+        act_dep_map = _to_utc(grp_unique.set_index("station_id")["act_dep"]) if "act_dep" in grp_unique.columns else pd.Series(dtype="datetime64[ns, UTC]")
+        sched_arr_map = _to_utc(grp_unique.set_index("station_id")["sched_arr"]) if "sched_arr" in grp_unique.columns else pd.Series(dtype="datetime64[ns, UTC]")
+        act_arr_map = _to_utc(grp_unique.set_index("station_id")["act_arr"]) if "act_arr" in grp_unique.columns else pd.Series(dtype="datetime64[ns, UTC]")
 
         # Initialize at first station u
         u0 = hops[0][0]
         platforms_u, dwell_u = graph.station_attr.get(u0, (1, 2.0))
-        # Arrival at origin (use actual or sched or dep - dwell)
+        # Arrival at origin (use actual or sched); departure request (actual/sched)
         arr0 = act_arr_map.get(u0, pd.NaT)
         if pd.isna(arr0):
             arr0 = sched_arr_map.get(u0, pd.NaT)
@@ -130,9 +138,13 @@ def run(events_df: pd.DataFrame, graph: SectionGraph) -> SimResult:
             dep_sched0 = sched_dep_map.get(u0, pd.NaT)
         if pd.isna(arr0) and pd.notna(dep_sched0):
             arr0 = dep_sched0 - pd.Timedelta(minutes=dwell_u)
+        if pd.isna(dep_sched0) and pd.notna(arr0):
+            dep_sched0 = arr0 + pd.Timedelta(minutes=dwell_u)
 
         # Allocate platform dwell at origin
-        start_plat_u, wait_plat0 = _alloc_heap(plat_heap[u0], arr0 if pd.notna(arr0) else dep_sched0)
+        # Ensure a concrete request time
+        t_origin_req = arr0 if pd.notna(arr0) else dep_sched0
+        start_plat_u, wait_plat0 = _alloc_heap(plat_heap[u0], t_origin_req)
         dwell_end_u = max(start_plat_u, arr0) + pd.Timedelta(minutes=dwell_u) if pd.notna(arr0) else start_plat_u + pd.Timedelta(minutes=dwell_u)
         # Requested departure time respects dwell and schedule
         t_req_dep = max(dep_sched0, dwell_end_u) if pd.notna(dep_sched0) else dwell_end_u
@@ -214,12 +226,16 @@ def run(events_df: pd.DataFrame, graph: SectionGraph) -> SimResult:
     }
     if not df_blocks.empty and not df_plats.empty:
         last_dep = df_plats.sort_values(["train_id", "dep_platform"]).groupby("train_id").tail(1)
-        # If events_df has scheduled arrival at last station, compute delays; else zeros
-        # Map scheduled arrival at last station via original events
+        # Use a de-duplicated (train_id, station_id) mapping for scheduled arrival
+        df_unique = df.drop_duplicates(subset=["train_id", "station_id"], keep="first")
         last_station = last_dep.set_index("train_id")["station_id"]
-        sched_arr_map_all = _to_utc(df.set_index(["train_id", "station_id"]).get("sched_arr"))
-        # Align indices
-        idx = pd.MultiIndex.from_arrays([last_station.index, last_station.values], names=["train_id", "station_id"])  # type: ignore
+        # Build a unique multi-index Series for scheduled arrival
+        sched_arr_map_all = _to_utc(df_unique.set_index(["train_id", "station_id"]) ["sched_arr"])  # type: ignore
+        # Align indices to (train_id, last_station)
+        idx = pd.MultiIndex.from_arrays([
+            last_station.index,  # train_id
+            last_station.values,  # station_id
+        ], names=["train_id", "station_id"])  # type: ignore
         sched_arr_last = sched_arr_map_all.reindex(idx)
         delay = None
         if sched_arr_last is not None:
@@ -255,4 +271,3 @@ def save(result: SimResult, out_dir: str | "PathLike[str]") -> None:
     result.waiting_ledger.to_parquet(out / "national_waiting_ledger.parquet", index=False)
     import json
     (out / "national_sim_kpis.json").write_text(json.dumps(result.sim_kpis, indent=2))
-

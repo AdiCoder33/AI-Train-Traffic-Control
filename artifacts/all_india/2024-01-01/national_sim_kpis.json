@@ -1,0 +1,9 @@
+{
+  "trains_served": 11113,
+  "otp_exit_pct": 0.9268424367857464,
+  "avg_exit_delay_min": 780159.1134359251,
+  "p90_exit_delay_min": 1531259.3999999997,
+  "total_wait_min": 8671730694.899752,
+  "wait_min_block_or_headway": 524824810.29993,
+  "wait_min_platform_busy": 8146905884.599821
+}

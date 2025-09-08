@@ -40,10 +40,12 @@ python - "$ARTIFACT_DIR/events_clean.parquet" "$ARTIFACT_DIR/section_edges.parqu
 import sys, pandas as pd
 from src.data.graph import build
 events_p, edges_p, nodes_p = sys.argv[1], sys.argv[2], sys.argv[3]
+DEFAULT_PLATFORMS = 6
 df = pd.read_parquet(events_p)
 stations = sorted([s for s in df['station_id'].dropna().unique().tolist()])
 stations_dict = {sid:i for i,sid in enumerate(stations)}
 edges_df, nodes_df = build(df, stations_dict)
+nodes_df['platforms'] = DEFAULT_PLATFORMS
 edges_df.to_parquet(edges_p, index=False)
 nodes_df.to_parquet(nodes_p, index=False)
 PY
@@ -52,4 +54,3 @@ echo "[4/4] Running national baseline replay"
 "$(dirname "$0")/run_national.sh" "$SCOPE" "$DATE"
 
 echo "[ALL-INDIA] Complete. Artifacts at $ARTIFACT_DIR"
-

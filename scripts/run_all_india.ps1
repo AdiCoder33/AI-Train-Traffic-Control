@@ -21,9 +21,9 @@ Write-Host "[2/4] Normalizing to events_clean"
 python -c "import sys, pandas as pd; from src.data.normalize import to_train_events; raw_p, out_p, date = sys.argv[1], sys.argv[2], sys.argv[3]; df_raw=pd.read_parquet(raw_p); df_norm=to_train_events(df_raw, default_service_date=date); df_norm.to_parquet(out_p, index=False)" "$ArtifactDir/raw.parquet" "$ArtifactDir/events_clean.parquet" $Date
 if ($LASTEXITCODE -ne 0) { throw "Normalize failed (exit $LASTEXITCODE)" }
 
-# 3) Build national nodes/edges
+# 3) Build national nodes/edges (set larger default platforms)
 Write-Host "[3/4] Building national nodes/edges"
-python -c "import sys, json, pandas as pd; from src.data.graph import build; events_p, edges_p, nodes_p = sys.argv[1], sys.argv[2], sys.argv[3]; df = pd.read_parquet(events_p); stations = sorted([s for s in df['station_id'].dropna().unique().tolist()]); stations_dict = {sid:i for i,sid in enumerate(stations)}; edges_df, nodes_df = build(df, stations_dict); edges_df.to_parquet(edges_p, index=False); nodes_df.to_parquet(nodes_p, index=False)" "$ArtifactDir/events_clean.parquet" "$ArtifactDir/section_edges.parquet" "$ArtifactDir/section_nodes.parquet"
+python -c "import sys, json, pandas as pd; from src.data.graph import build; events_p, edges_p, nodes_p = sys.argv[1], sys.argv[2], sys.argv[3]; DEFAULT_PLATFORMS=6; df = pd.read_parquet(events_p); stations = sorted([s for s in df['station_id'].dropna().unique().tolist()]); stations_dict = {sid:i for i,sid in enumerate(stations)}; edges_df, nodes_df = build(df, stations_dict); nodes_df['platforms'] = DEFAULT_PLATFORMS; edges_df.to_parquet(edges_p, index=False); nodes_df.to_parquet(nodes_p, index=False)" "$ArtifactDir/events_clean.parquet" "$ArtifactDir/section_edges.parquet" "$ArtifactDir/section_nodes.parquet"
 if ($LASTEXITCODE -ne 0) { throw "Build national graph failed (exit $LASTEXITCODE)" }
 
 # 4) Run national baseline replay
@@ -33,3 +33,8 @@ if ($LASTEXITCODE -ne 0) { throw "run_national.ps1 failed (exit $LASTEXITCODE)" 
 
 Write-Host "[ALL-INDIA] Complete. Artifacts at $ArtifactDir"
 
+# Print quick KPI glance if available
+if (Test-Path "$ArtifactDir/national_sim_kpis.json") {
+  Write-Host "[ALL-INDIA] KPIs:"
+  Get-Content "$ArtifactDir/national_sim_kpis.json"
+}
