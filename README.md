@@ -229,3 +229,23 @@ Notes:
 - Windows: `./scripts/run_all_india.ps1 all_india 2024-01-01 'Train_details*.csv'`
 - Linux/macOS: `./scripts/run_all_india.sh all_india 2024-01-01 'Train_details*.csv'`
 - This loads raw → normalizes to `events_clean` → builds national `section_edges`/`section_nodes` → runs the national replay.
+
+## Phase 3: Conflict Radar (Risk Prediction)
+Scan upcoming block and platform allocations to predict potential violations and surface alerts.
+
+Run (Windows):
+- `./scripts/run_risk.ps1 <scope_id> <YYYY-MM-DD> [HorizonMin=60] [T0_ISO]`
+
+Run (Linux/macOS):
+- `./scripts/run_risk.sh <scope_id> <YYYY-MM-DD> [HorizonMin=60] [T0_ISO]`
+
+Inputs (from artifacts):
+- `section_edges.parquet`, `section_nodes.parquet`
+- `national_block_occupancy.parquet` (or `block_occupancy.parquet`)
+- Optional: `national_platform_occupancy.parquet`, `national_waiting_ledger.parquet`
+
+Outputs (artifacts):
+- `conflict_radar.json` — list of upcoming risks with type, trains, location, time, severity
+- `risk_timeline.parquet` — risks per resource/time bucket
+- `mitigation_preview.json` — simple holds (2/5 min) and whether they resolve
+- `risk_kpis.json` — totals, severity breakdown, avg lead time, % with preview
