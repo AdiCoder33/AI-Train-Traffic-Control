@@ -1,13 +1,33 @@
 {
-  "applied_risks": 32,
+  "applied_risks": 45,
+  "baseline_risks": 28,
+  "risk_reduction": -17,
+  "risk_reduction_headway_block": 4,
+  "risk_breakdown_before": {
+    "block_capacity": 14,
+    "headway": 14,
+    "platform_overflow": 21
+  },
+  "risk_breakdown_after": {
+    "block_capacity": 12,
+    "headway": 12,
+    "platform_overflow": 21
+  },
   "validation_after": {
     "post_overlap_violations": 0,
     "headway_violations": 0,
-    "critical_min_lead_min": null,
+    "critical_min_lead_min": 0.0,
     "ok_post_no_overlap": true,
     "ok_headway_enforced": true
   },
-  "wait_minutes_after": 8554047949.49975,
-  "baseline_risks": 24,
-  "risk_reduction": -8
+  "wait_minutes_before": 282594.8999999834,
+  "wait_minutes_after": 102576.99999998332,
+  "kpi_before": {
+    "otp_exit_pct": 88.88888888888889,
+    "avg_exit_delay_min": 2.7777777777777777
+  },
+  "kpi_after": {
+    "otp_exit_pct": 88.88888888888889,
+    "avg_exit_delay_min": 2.7777777777777777
+  }
 }

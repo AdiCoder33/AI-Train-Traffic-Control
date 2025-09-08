@@ -260,11 +260,11 @@ Proposes safe, explainable controller actions (holds now; hooks for platform rea
 
 Run (Windows):
 - `./scripts/run_risk.ps1 <scope_id> <YYYY-MM-DD> [HorizonMin=60] [T0_ISO]`  (ensure radar exists)
-- `./scripts/run_opt.ps1 <scope_id> <YYYY-MM-DD> [HorizonMin=60] [T0_ISO]`
+- `./scripts/run_opt.ps1 <scope_id> <YYYY-MM-DD> [HorizonMin=60] [T0_ISO] [MaxHoldMin=3]`
 
 Run (Linux/macOS):
 - `./scripts/run_risk.sh <scope_id> <YYYY-MM-DD> [HorizonMin=60] [T0_ISO]`
-- `./scripts/run_opt.sh <scope_id> <YYYY-MM-DD> [HorizonMin=60] [T0_ISO]`
+- `./scripts/run_opt.sh <scope_id> <YYYY-MM-DD> [HorizonMin=60] [T0_ISO] [MaxHoldMin=3]`
 
 Inputs:
 - `section_edges.parquet`, `section_nodes.parquet`
@@ -282,6 +282,7 @@ Notes:
 - Deterministic heuristic: sorts risks by severity/lead/priority and proposes minimal safe holds for headway/block capacity; platform risks use short holds until platform data is enriched.
 - Safety check: actions are constructed to satisfy headway vs the immediate predecessor; full replay verification remains in Phase 2 apply.
 - MILP/CP-SAT hooks can be added; install OR‑Tools/PuLP to switch to exact optimization later.
+- Knobs: `MaxHoldMin` clamps hold durations (default 3) to reduce platform pressure; combine with anchored `T0` for apples‑to‑apples comparisons.
 
 ### Apply + Validate (Phase 4)
 Applies `rec_plan.json` holds to the twin and verifies outcome in the horizon.

@@ -2,39 +2,6 @@
   {
     "risk_ref": {
       "type": "platform_overflow",
-      "station_id": "S2516",
-      "train_ids": [
-        "64420"
-      ],
-      "time_window": [
-        "2024-01-01 00:10:00+00:00",
-        "2024-01-03 21:31:30+00:00"
-      ],
-      "severity": "High",
-      "lead_min": 7.0,
-      "required_hold_min": 4161.5
-    },
-    "options": [
-      {
-        "type": "HOLD",
-        "train_id": "64420",
-        "at_station": "S2516",
-        "minutes": 2.0,
-        "score": 0.0
-      },
-      {
-        "type": "HOLD",
-        "train_id": "64420",
-        "at_station": "S2516",
-        "minutes": 5.0,
-        "score": -0.1
-      }
-    ],
-    "tradeoffs": "Hold to avoid platform overflow; reassignment possible if multiple platforms."
-  },
-  {
-    "risk_ref": {
-      "type": "platform_overflow",
       "station_id": "S5496",
       "train_ids": [
         "64076"
@@ -43,8 +10,8 @@
         "2024-01-01 00:15:00+00:00",
         "2024-01-01 15:47:00+00:00"
       ],
-      "severity": "High",
-      "lead_min": 12.0,
+      "severity": "Critical",
+      "lead_min": 0.0,
       "required_hold_min": 932.0
     },
     "options": [
@@ -59,7 +26,7 @@
         "type": "HOLD",
         "train_id": "64076",
         "at_station": "S5496",
-        "minutes": 5.0,
+        "minutes": 3,
         "score": -0.1
       }
     ],
@@ -76,8 +43,8 @@
         "2024-01-01 00:15:00+00:00",
         "2024-01-01 00:17:00+00:00"
       ],
-      "severity": "High",
-      "lead_min": 12.0,
+      "severity": "Critical",
+      "lead_min": 0.0,
       "required_hold_min": 2.0
     },
     "options": [
@@ -92,7 +59,7 @@
         "type": "HOLD",
         "train_id": "11043",
         "at_station": "S4451",
-        "minutes": 5.0,
+        "minutes": 3,
         "score": -0.1
       }
     ],
@@ -109,8 +76,8 @@
         "2024-01-01 00:15:00+00:00",
         "2024-01-01 15:07:00+00:00"
       ],
-      "severity": "High",
-      "lead_min": 12.0,
+      "severity": "Critical",
+      "lead_min": 0.0,
       "required_hold_min": 892.0
     },
     "options": [
@@ -125,7 +92,7 @@
         "type": "HOLD",
         "train_id": "1705",
         "at_station": "S0654",
-        "minutes": 5.0,
+        "minutes": 3,
         "score": -0.1
       }
     ],
@@ -142,8 +109,8 @@
         "2024-01-01 00:15:00+00:00",
         "2024-01-01 00:17:00+00:00"
       ],
-      "severity": "High",
-      "lead_min": 12.0,
+      "severity": "Critical",
+      "lead_min": 0.0,
       "required_hold_min": 2.0
     },
     "options": [
@@ -158,7 +125,7 @@
         "type": "HOLD",
         "train_id": "22865",
         "at_station": "S4451",
-        "minutes": 5.0,
+        "minutes": 3,
         "score": -0.1
       }
     ],
@@ -178,8 +145,8 @@
         "2024-01-01 00:17:00+00:00",
         "2024-01-01 00:35:00+00:00"
       ],
-      "severity": "High",
-      "lead_min": 14.0
+      "severity": "Critical",
+      "lead_min": 2.0
     },
     "options": [
       {
@@ -193,7 +160,71 @@
         "type": "HOLD",
         "train_id": "22848",
         "at_station": "S4451",
-        "minutes": 5.0,
+        "minutes": 3,
+        "score": -0.1
+      }
+    ],
+    "tradeoffs": "Short hold vs safer longer hold; impact estimated via ETA deltas."
+  },
+  {
+    "risk_ref": {
+      "type": "block_capacity",
+      "block_id": "B15364",
+      "u": "S4451",
+      "v": "S7528",
+      "train_ids": [
+        "22848",
+        "12879"
+      ],
+      "time_window": [
+        "2024-01-01 00:17:00+00:00",
+        "2024-01-01 00:35:00+00:00"
+      ],
+      "severity": "Critical",
+      "lead_min": 2.0
+    },
+    "options": [
+      {
+        "type": "SPEED_TUNE",
+        "train_id": "22848",
+        "block_id": "B15364",
+        "speed_factor": 0.95,
+        "score": -0.02
+      }
+    ],
+    "tradeoffs": "Within policy, reduce run-time by 5% on this block."
+  },
+  {
+    "risk_ref": {
+      "type": "headway",
+      "block_id": "B15364",
+      "u": "S4451",
+      "v": "S7528",
+      "train_ids": [
+        "22848",
+        "12879"
+      ],
+      "time_window": [
+        "2024-01-01 00:17:00+00:00",
+        "2024-01-01 00:35:00+00:00"
+      ],
+      "severity": "Critical",
+      "lead_min": 2.0,
+      "required_hold_min": 95.5
+    },
+    "options": [
+      {
+        "type": "HOLD",
+        "train_id": "22848",
+        "at_station": "S4451",
+        "minutes": 2.0,
+        "score": 0.0
+      },
+      {
+        "type": "HOLD",
+        "train_id": "22848",
+        "at_station": "S4451",
+        "minutes": 3,
         "score": -0.1
       }
     ],
@@ -213,9 +244,38 @@
         "2024-01-01 00:17:00+00:00",
         "2024-01-01 00:35:00+00:00"
       ],
-      "severity": "High",
-      "lead_min": 14.0,
+      "severity": "Critical",
+      "lead_min": 2.0,
       "required_hold_min": 95.5
+    },
+    "options": [
+      {
+        "type": "SPEED_TUNE",
+        "train_id": "22848",
+        "block_id": "B15364",
+        "speed_factor": 0.95,
+        "score": -0.02
+      }
+    ],
+    "tradeoffs": "Within policy, reduce run-time by 5% on this block."
+  },
+  {
+    "risk_ref": {
+      "type": "block_capacity",
+      "block_id": "B15364",
+      "u": "S4451",
+      "v": "S7528",
+      "train_ids": [
+        "22848",
+        "12879",
+        "12811"
+      ],
+      "time_window": [
+        "2024-01-01 00:17:00+00:00",
+        "2024-01-01 00:35:00+00:00"
+      ],
+      "severity": "Critical",
+      "lead_min": 2.0
     },
     "options": [
       {
@@ -229,7 +289,7 @@
         "type": "HOLD",
         "train_id": "22848",
         "at_station": "S4451",
-        "minutes": 5.0,
+        "minutes": 3,
         "score": -0.1
       }
     ],
@@ -250,22 +310,51 @@
         "2024-01-01 00:17:00+00:00",
         "2024-01-01 00:35:00+00:00"
       ],
-      "severity": "High",
-      "lead_min": 14.0
+      "severity": "Critical",
+      "lead_min": 2.0
+    },
+    "options": [
+      {
+        "type": "SPEED_TUNE",
+        "train_id": "22848",
+        "block_id": "B15364",
+        "speed_factor": 0.95,
+        "score": -0.02
+      }
+    ],
+    "tradeoffs": "Within policy, reduce run-time by 5% on this block."
+  },
+  {
+    "risk_ref": {
+      "type": "headway",
+      "block_id": "B15364",
+      "u": "S4451",
+      "v": "S7528",
+      "train_ids": [
+        "22848",
+        "12811"
+      ],
+      "time_window": [
+        "2024-01-01 00:17:00+00:00",
+        "2024-01-01 00:35:00+00:00"
+      ],
+      "severity": "Critical",
+      "lead_min": 2.0,
+      "required_hold_min": 95.5
     },
     "options": [
       {
         "type": "HOLD",
-        "train_id": "22848",
+        "train_id": "12811",
         "at_station": "S4451",
         "minutes": 2.0,
         "score": 0.0
       },
       {
         "type": "HOLD",
-        "train_id": "22848",
+        "train_id": "12811",
         "at_station": "S4451",
-        "minutes": 5.0,
+        "minutes": 3,
         "score": -0.1
       }
     ],
@@ -285,23 +374,51 @@
         "2024-01-01 00:17:00+00:00",
         "2024-01-01 00:35:00+00:00"
       ],
-      "severity": "High",
-      "lead_min": 14.0,
+      "severity": "Critical",
+      "lead_min": 2.0,
       "required_hold_min": 95.5
     },
     "options": [
       {
+        "type": "SPEED_TUNE",
+        "train_id": "12811",
+        "block_id": "B15364",
+        "speed_factor": 0.95,
+        "score": -0.02
+      }
+    ],
+    "tradeoffs": "Within policy, reduce run-time by 5% on this block."
+  },
+  {
+    "risk_ref": {
+      "type": "block_capacity",
+      "block_id": "B17558",
+      "u": "S5087",
+      "v": "S0840",
+      "train_ids": [
+        "43001",
+        "42001"
+      ],
+      "time_window": [
+        "2024-01-01 00:17:00+00:00",
+        "2024-01-01 00:21:00+00:00"
+      ],
+      "severity": "Critical",
+      "lead_min": 2.0
+    },
+    "options": [
+      {
         "type": "HOLD",
-        "train_id": "22848",
-        "at_station": "S4451",
+        "train_id": "43001",
+        "at_station": "S5087",
         "minutes": 2.0,
         "score": 0.0
       },
       {
         "type": "HOLD",
-        "train_id": "22848",
-        "at_station": "S4451",
-        "minutes": 5.0,
+        "train_id": "43001",
+        "at_station": "S5087",
+        "minutes": 3,
         "score": -0.1
       }
     ],
@@ -321,8 +438,37 @@
         "2024-01-01 00:17:00+00:00",
         "2024-01-01 00:21:00+00:00"
       ],
-      "severity": "High",
-      "lead_min": 14.0
+      "severity": "Critical",
+      "lead_min": 2.0
+    },
+    "options": [
+      {
+        "type": "SPEED_TUNE",
+        "train_id": "43001",
+        "block_id": "B17558",
+        "speed_factor": 0.95,
+        "score": -0.02
+      }
+    ],
+    "tradeoffs": "Within policy, reduce run-time by 5% on this block."
+  },
+  {
+    "risk_ref": {
+      "type": "headway",
+      "block_id": "B17558",
+      "u": "S5087",
+      "v": "S0840",
+      "train_ids": [
+        "43001",
+        "42001"
+      ],
+      "time_window": [
+        "2024-01-01 00:17:00+00:00",
+        "2024-01-01 00:19:00+00:00"
+      ],
+      "severity": "Critical",
+      "lead_min": 2.0,
+      "required_hold_min": 17.0
     },
     "options": [
       {
@@ -336,7 +482,7 @@
         "type": "HOLD",
         "train_id": "43001",
         "at_station": "S5087",
-        "minutes": 5.0,
+        "minutes": 3,
         "score": -0.1
       }
     ],
@@ -356,27 +502,20 @@
         "2024-01-01 00:17:00+00:00",
         "2024-01-01 00:19:00+00:00"
       ],
-      "severity": "High",
-      "lead_min": 14.0,
+      "severity": "Critical",
+      "lead_min": 2.0,
       "required_hold_min": 17.0
     },
     "options": [
       {
-        "type": "HOLD",
+        "type": "SPEED_TUNE",
         "train_id": "43001",
-        "at_station": "S5087",
-        "minutes": 2.0,
-        "score": 0.0
-      },
-      {
-        "type": "HOLD",
-        "train_id": "43001",
-        "at_station": "S5087",
-        "minutes": 5.0,
-        "score": -0.1
+        "block_id": "B17558",
+        "speed_factor": 0.95,
+        "score": -0.02
       }
     ],
-    "tradeoffs": "Short hold vs safer longer hold; impact estimated via ETA deltas."
+    "tradeoffs": "Within policy, reduce run-time by 5% on this block."
   },
   {
     "risk_ref": {
@@ -389,8 +528,8 @@
         "2024-01-01 00:18:00+00:00",
         "2024-01-01 21:38:30+00:00"
       ],
-      "severity": "High",
-      "lead_min": 15.0,
+      "severity": "Critical",
+      "lead_min": 3.0,
       "required_hold_min": 1280.5
     },
     "options": [
@@ -405,7 +544,7 @@
         "type": "HOLD",
         "train_id": "95013",
         "at_station": "S3486",
-        "minutes": 5.0,
+        "minutes": 3,
         "score": -0.1
       }
     ],
@@ -427,8 +566,8 @@
         "2024-01-01 00:19:00+00:00",
         "2024-01-01 00:37:00+00:00"
       ],
-      "severity": "High",
-      "lead_min": 16.0
+      "severity": "Critical",
+      "lead_min": 4.0
     },
     "options": [
       {
@@ -442,7 +581,73 @@
         "type": "HOLD",
         "train_id": "22848",
         "at_station": "S4451",
-        "minutes": 5.0,
+        "minutes": 3,
+        "score": -0.1
+      }
+    ],
+    "tradeoffs": "Short hold vs safer longer hold; impact estimated via ETA deltas."
+  },
+  {
+    "risk_ref": {
+      "type": "block_capacity",
+      "block_id": "B15364",
+      "u": "S4451",
+      "v": "S7528",
+      "train_ids": [
+        "22848",
+        "12879",
+        "12811",
+        "11043"
+      ],
+      "time_window": [
+        "2024-01-01 00:19:00+00:00",
+        "2024-01-01 00:37:00+00:00"
+      ],
+      "severity": "Critical",
+      "lead_min": 4.0
+    },
+    "options": [
+      {
+        "type": "SPEED_TUNE",
+        "train_id": "22848",
+        "block_id": "B15364",
+        "speed_factor": 0.95,
+        "score": -0.02
+      }
+    ],
+    "tradeoffs": "Within policy, reduce run-time by 5% on this block."
+  },
+  {
+    "risk_ref": {
+      "type": "headway",
+      "block_id": "B15364",
+      "u": "S4451",
+      "v": "S7528",
+      "train_ids": [
+        "22848",
+        "11043"
+      ],
+      "time_window": [
+        "2024-01-01 00:19:00+00:00",
+        "2024-01-01 00:35:00+00:00"
+      ],
+      "severity": "Critical",
+      "lead_min": 4.0,
+      "required_hold_min": 93.5
+    },
+    "options": [
+      {
+        "type": "HOLD",
+        "train_id": "11043",
+        "at_station": "S4451",
+        "minutes": 2.0,
+        "score": 0.0
+      },
+      {
+        "type": "HOLD",
+        "train_id": "11043",
+        "at_station": "S4451",
+        "minutes": 3,
         "score": -0.1
       }
     ],
@@ -462,9 +667,40 @@
         "2024-01-01 00:19:00+00:00",
         "2024-01-01 00:35:00+00:00"
       ],
-      "severity": "High",
-      "lead_min": 16.0,
+      "severity": "Critical",
+      "lead_min": 4.0,
       "required_hold_min": 93.5
+    },
+    "options": [
+      {
+        "type": "SPEED_TUNE",
+        "train_id": "11043",
+        "block_id": "B15364",
+        "speed_factor": 0.95,
+        "score": -0.02
+      }
+    ],
+    "tradeoffs": "Within policy, reduce run-time by 5% on this block."
+  },
+  {
+    "risk_ref": {
+      "type": "block_capacity",
+      "block_id": "B15364",
+      "u": "S4451",
+      "v": "S7528",
+      "train_ids": [
+        "22848",
+        "12879",
+        "12811",
+        "11043",
+        "22865"
+      ],
+      "time_window": [
+        "2024-01-01 00:19:00+00:00",
+        "2024-01-01 00:37:00+00:00"
+      ],
+      "severity": "Critical",
+      "lead_min": 4.0
     },
     "options": [
       {
@@ -478,7 +714,7 @@
         "type": "HOLD",
         "train_id": "22848",
         "at_station": "S4451",
-        "minutes": 5.0,
+        "minutes": 3,
         "score": -0.1
       }
     ],
@@ -501,8 +737,37 @@
         "2024-01-01 00:19:00+00:00",
         "2024-01-01 00:37:00+00:00"
       ],
-      "severity": "High",
-      "lead_min": 16.0
+      "severity": "Critical",
+      "lead_min": 4.0
+    },
+    "options": [
+      {
+        "type": "SPEED_TUNE",
+        "train_id": "22848",
+        "block_id": "B15364",
+        "speed_factor": 0.95,
+        "score": -0.02
+      }
+    ],
+    "tradeoffs": "Within policy, reduce run-time by 5% on this block."
+  },
+  {
+    "risk_ref": {
+      "type": "headway",
+      "block_id": "B15364",
+      "u": "S4451",
+      "v": "S7528",
+      "train_ids": [
+        "11043",
+        "22865"
+      ],
+      "time_window": [
+        "2024-01-01 00:19:00+00:00",
+        "2024-01-01 00:37:00+00:00"
+      ],
+      "severity": "Critical",
+      "lead_min": 4.0,
+      "required_hold_min": 95.5
     },
     "options": [
       {
@@ -516,7 +781,7 @@
         "type": "HOLD",
         "train_id": "22865",
         "at_station": "S4451",
-        "minutes": 5.0,
+        "minutes": 3,
         "score": -0.1
       }
     ],
@@ -536,27 +801,20 @@
         "2024-01-01 00:19:00+00:00",
         "2024-01-01 00:37:00+00:00"
       ],
-      "severity": "High",
-      "lead_min": 16.0,
+      "severity": "Critical",
+      "lead_min": 4.0,
       "required_hold_min": 95.5
     },
     "options": [
       {
-        "type": "HOLD",
+        "type": "SPEED_TUNE",
         "train_id": "22865",
-        "at_station": "S4451",
-        "minutes": 2.0,
-        "score": 0.0
-      },
-      {
-        "type": "HOLD",
-        "train_id": "22865",
-        "at_station": "S4451",
-        "minutes": 5.0,
-        "score": -0.1
+        "block_id": "B15364",
+        "speed_factor": 0.95,
+        "score": -0.02
       }
     ],
-    "tradeoffs": "Short hold vs safer longer hold; impact estimated via ETA deltas."
+    "tradeoffs": "Within policy, reduce run-time by 5% on this block."
   },
   {
     "risk_ref": {
@@ -569,8 +827,8 @@
         "2024-01-01 00:19:00+00:00",
         "2024-01-01 21:40:30+00:00"
       ],
-      "severity": "High",
-      "lead_min": 16.0,
+      "severity": "Critical",
+      "lead_min": 4.0,
       "required_hold_min": 1281.5
     },
     "options": [
@@ -585,7 +843,7 @@
         "type": "HOLD",
         "train_id": "96651",
         "at_station": "S3486",
-        "minutes": 5.0,
+        "minutes": 3,
         "score": -0.1
       }
     ],
@@ -602,8 +860,8 @@
         "2024-01-01 00:20:00+00:00",
         "2024-01-01 15:11:00+00:00"
       ],
-      "severity": "High",
-      "lead_min": 17.0,
+      "severity": "Critical",
+      "lead_min": 5.0,
       "required_hold_min": 891.0
     },
     "options": [
@@ -618,7 +876,7 @@
         "type": "HOLD",
         "train_id": "15068",
         "at_station": "S0654",
-        "minutes": 5.0,
+        "minutes": 3,
         "score": -0.1
       }
     ],
@@ -639,7 +897,7 @@
         "2024-01-01 00:27:00+00:00"
       ],
       "severity": "High",
-      "lead_min": 19.0
+      "lead_min": 7.0
     },
     "options": [
       {
@@ -653,7 +911,71 @@
         "type": "HOLD",
         "train_id": "19601",
         "at_station": "S7732",
-        "minutes": 5.0,
+        "minutes": 3,
+        "score": -0.1
+      }
+    ],
+    "tradeoffs": "Short hold vs safer longer hold; impact estimated via ETA deltas."
+  },
+  {
+    "risk_ref": {
+      "type": "block_capacity",
+      "block_id": "B26822",
+      "u": "S7732",
+      "v": "S6364",
+      "train_ids": [
+        "19601",
+        "12316"
+      ],
+      "time_window": [
+        "2024-01-01 00:22:00+00:00",
+        "2024-01-01 00:27:00+00:00"
+      ],
+      "severity": "High",
+      "lead_min": 7.0
+    },
+    "options": [
+      {
+        "type": "SPEED_TUNE",
+        "train_id": "19601",
+        "block_id": "B26822",
+        "speed_factor": 0.95,
+        "score": -0.02
+      }
+    ],
+    "tradeoffs": "Within policy, reduce run-time by 5% on this block."
+  },
+  {
+    "risk_ref": {
+      "type": "headway",
+      "block_id": "B26822",
+      "u": "S7732",
+      "v": "S6364",
+      "train_ids": [
+        "19601",
+        "12316"
+      ],
+      "time_window": [
+        "2024-01-01 00:22:00+00:00",
+        "2024-01-01 00:27:00+00:00"
+      ],
+      "severity": "High",
+      "lead_min": 7.0,
+      "required_hold_min": 218.0
+    },
+    "options": [
+      {
+        "type": "HOLD",
+        "train_id": "19601",
+        "at_station": "S7732",
+        "minutes": 2.0,
+        "score": 0.0
+      },
+      {
+        "type": "HOLD",
+        "train_id": "19601",
+        "at_station": "S7732",
+        "minutes": 3,
         "score": -0.1
       }
     ],
@@ -674,22 +996,50 @@
         "2024-01-01 00:27:00+00:00"
       ],
       "severity": "High",
-      "lead_min": 19.0,
+      "lead_min": 7.0,
       "required_hold_min": 218.0
     },
     "options": [
       {
-        "type": "HOLD",
+        "type": "SPEED_TUNE",
         "train_id": "19601",
-        "at_station": "S7732",
+        "block_id": "B26822",
+        "speed_factor": 0.95,
+        "score": -0.02
+      }
+    ],
+    "tradeoffs": "Within policy, reduce run-time by 5% on this block."
+  },
+  {
+    "risk_ref": {
+      "type": "block_capacity",
+      "block_id": "B6183",
+      "u": "S1774",
+      "v": "S1792",
+      "train_ids": [
+        "11093",
+        "1011"
+      ],
+      "time_window": [
+        "2024-01-01 00:22:00+00:00",
+        "2024-01-01 00:34:00+00:00"
+      ],
+      "severity": "High",
+      "lead_min": 7.0
+    },
+    "options": [
+      {
+        "type": "HOLD",
+        "train_id": "11093",
+        "at_station": "S1774",
         "minutes": 2.0,
         "score": 0.0
       },
       {
         "type": "HOLD",
-        "train_id": "19601",
-        "at_station": "S7732",
-        "minutes": 5.0,
+        "train_id": "11093",
+        "at_station": "S1774",
+        "minutes": 3,
         "score": -0.1
       }
     ],
@@ -710,7 +1060,36 @@
         "2024-01-01 00:34:00+00:00"
       ],
       "severity": "High",
-      "lead_min": 19.0
+      "lead_min": 7.0
+    },
+    "options": [
+      {
+        "type": "SPEED_TUNE",
+        "train_id": "11093",
+        "block_id": "B6183",
+        "speed_factor": 0.95,
+        "score": -0.02
+      }
+    ],
+    "tradeoffs": "Within policy, reduce run-time by 5% on this block."
+  },
+  {
+    "risk_ref": {
+      "type": "headway",
+      "block_id": "B6183",
+      "u": "S1774",
+      "v": "S1792",
+      "train_ids": [
+        "11093",
+        "1011"
+      ],
+      "time_window": [
+        "2024-01-01 00:22:00+00:00",
+        "2024-01-01 00:24:00+00:00"
+      ],
+      "severity": "High",
+      "lead_min": 7.0,
+      "required_hold_min": 63.5
     },
     "options": [
       {
@@ -724,7 +1103,7 @@
         "type": "HOLD",
         "train_id": "11093",
         "at_station": "S1774",
-        "minutes": 5.0,
+        "minutes": 3,
         "score": -0.1
       }
     ],
@@ -745,26 +1124,19 @@
         "2024-01-01 00:24:00+00:00"
       ],
       "severity": "High",
-      "lead_min": 19.0,
+      "lead_min": 7.0,
       "required_hold_min": 63.5
     },
     "options": [
       {
-        "type": "HOLD",
+        "type": "SPEED_TUNE",
         "train_id": "11093",
-        "at_station": "S1774",
-        "minutes": 2.0,
-        "score": 0.0
-      },
-      {
-        "type": "HOLD",
-        "train_id": "11093",
-        "at_station": "S1774",
-        "minutes": 5.0,
-        "score": -0.1
+        "block_id": "B6183",
+        "speed_factor": 0.95,
+        "score": -0.02
       }
     ],
-    "tradeoffs": "Short hold vs safer longer hold; impact estimated via ETA deltas."
+    "tradeoffs": "Within policy, reduce run-time by 5% on this block."
   },
   {
     "risk_ref": {
@@ -778,7 +1150,7 @@
         "2024-01-08 23:23:54+00:00"
       ],
       "severity": "High",
-      "lead_min": 22.0,
+      "lead_min": 10.0,
       "required_hold_min": 11458.9
     },
     "options": [
@@ -793,7 +1165,7 @@
         "type": "HOLD",
         "train_id": "11025",
         "at_station": "S1176",
-        "minutes": 5.0,
+        "minutes": 3,
         "score": -0.1
       }
     ],
@@ -811,7 +1183,7 @@
         "2024-01-01 15:13:00+00:00"
       ],
       "severity": "High",
-      "lead_min": 22.0,
+      "lead_min": 10.0,
       "required_hold_min": 888.0
     },
     "options": [
@@ -826,7 +1198,7 @@
         "type": "HOLD",
         "train_id": "9433",
         "at_station": "S0654",
-        "minutes": 5.0,
+        "minutes": 3,
         "score": -0.1
       }
     ],
@@ -847,21 +1219,85 @@
         "2024-01-01 00:48:00.000001001+00:00"
       ],
       "severity": "High",
-      "lead_min": 23.000000016666668
+      "lead_min": 11.000000016666666
     },
     "options": [
       {
         "type": "HOLD",
-        "train_id": "11093",
+        "train_id": "11003",
         "at_station": "S1792",
         "minutes": 2.0,
         "score": 0.0
       },
       {
         "type": "HOLD",
-        "train_id": "11093",
+        "train_id": "11003",
         "at_station": "S1792",
-        "minutes": 5.0,
+        "minutes": 3,
+        "score": -0.1
+      }
+    ],
+    "tradeoffs": "Short hold vs safer longer hold; impact estimated via ETA deltas."
+  },
+  {
+    "risk_ref": {
+      "type": "block_capacity",
+      "block_id": "B6287",
+      "u": "S1792",
+      "v": "S7528",
+      "train_ids": [
+        "11003",
+        "11093"
+      ],
+      "time_window": [
+        "2024-01-01 00:26:00.000001001+00:00",
+        "2024-01-01 00:48:00.000001001+00:00"
+      ],
+      "severity": "High",
+      "lead_min": 11.000000016666666
+    },
+    "options": [
+      {
+        "type": "SPEED_TUNE",
+        "train_id": "11003",
+        "block_id": "B6287",
+        "speed_factor": 0.95,
+        "score": -0.02
+      }
+    ],
+    "tradeoffs": "Within policy, reduce run-time by 5% on this block."
+  },
+  {
+    "risk_ref": {
+      "type": "headway",
+      "block_id": "B6287",
+      "u": "S1792",
+      "v": "S7528",
+      "train_ids": [
+        "11003",
+        "11093"
+      ],
+      "time_window": [
+        "2024-01-01 00:26:00.000001001+00:00",
+        "2024-01-01 00:29:00+00:00"
+      ],
+      "severity": "High",
+      "lead_min": 11.000000016666666,
+      "required_hold_min": 99.39999996666667
+    },
+    "options": [
+      {
+        "type": "HOLD",
+        "train_id": "11003",
+        "at_station": "S1792",
+        "minutes": 2.0,
+        "score": 0.0
+      },
+      {
+        "type": "HOLD",
+        "train_id": "11003",
+        "at_station": "S1792",
+        "minutes": 3,
         "score": -0.1
       }
     ],
@@ -882,22 +1318,50 @@
         "2024-01-01 00:29:00+00:00"
       ],
       "severity": "High",
-      "lead_min": 23.000000016666668,
+      "lead_min": 11.000000016666666,
       "required_hold_min": 99.39999996666667
     },
     "options": [
       {
+        "type": "SPEED_TUNE",
+        "train_id": "11003",
+        "block_id": "B6287",
+        "speed_factor": 0.95,
+        "score": -0.02
+      }
+    ],
+    "tradeoffs": "Within policy, reduce run-time by 5% on this block."
+  },
+  {
+    "risk_ref": {
+      "type": "block_capacity",
+      "block_id": "B6190",
+      "u": "S1774",
+      "v": "S5819",
+      "train_ids": [
+        "98001",
+        "98003"
+      ],
+      "time_window": [
+        "2024-01-01 00:28:00+00:00",
+        "2024-01-01 01:45:00+00:00"
+      ],
+      "severity": "High",
+      "lead_min": 13.0
+    },
+    "options": [
+      {
         "type": "HOLD",
-        "train_id": "11093",
-        "at_station": "S1792",
+        "train_id": "98003",
+        "at_station": "S1774",
         "minutes": 2.0,
         "score": 0.0
       },
       {
         "type": "HOLD",
-        "train_id": "11093",
-        "at_station": "S1792",
-        "minutes": 5.0,
+        "train_id": "98003",
+        "at_station": "S1774",
+        "minutes": 3,
         "score": -0.1
       }
     ],
@@ -918,7 +1382,36 @@
         "2024-01-01 01:45:00+00:00"
       ],
       "severity": "High",
-      "lead_min": 25.0
+      "lead_min": 13.0
+    },
+    "options": [
+      {
+        "type": "SPEED_TUNE",
+        "train_id": "98003",
+        "block_id": "B6190",
+        "speed_factor": 0.95,
+        "score": -0.02
+      }
+    ],
+    "tradeoffs": "Within policy, reduce run-time by 5% on this block."
+  },
+  {
+    "risk_ref": {
+      "type": "headway",
+      "block_id": "B6190",
+      "u": "S1774",
+      "v": "S5819",
+      "train_ids": [
+        "98001",
+        "98003"
+      ],
+      "time_window": [
+        "2024-01-01 00:28:00+00:00",
+        "2024-01-01 01:30:00+00:00"
+      ],
+      "severity": "High",
+      "lead_min": 13.0,
+      "required_hold_min": 80.0
     },
     "options": [
       {
@@ -932,7 +1425,7 @@
         "type": "HOLD",
         "train_id": "98003",
         "at_station": "S1774",
-        "minutes": 5.0,
+        "minutes": 3,
         "score": -0.1
       }
     ],
@@ -953,26 +1446,19 @@
         "2024-01-01 01:30:00+00:00"
       ],
       "severity": "High",
-      "lead_min": 25.0,
+      "lead_min": 13.0,
       "required_hold_min": 80.0
     },
     "options": [
       {
-        "type": "HOLD",
+        "type": "SPEED_TUNE",
         "train_id": "98003",
-        "at_station": "S1774",
-        "minutes": 2.0,
-        "score": 0.0
-      },
-      {
-        "type": "HOLD",
-        "train_id": "98003",
-        "at_station": "S1774",
-        "minutes": 5.0,
-        "score": -0.1
+        "block_id": "B6190",
+        "speed_factor": 0.95,
+        "score": -0.02
       }
     ],
-    "tradeoffs": "Short hold vs safer longer hold; impact estimated via ETA deltas."
+    "tradeoffs": "Within policy, reduce run-time by 5% on this block."
   },
   {
     "risk_ref": {
@@ -986,7 +1472,7 @@
         "2024-01-01 23:04:00+00:00"
       ],
       "severity": "High",
-      "lead_min": 25.0,
+      "lead_min": 13.0,
       "required_hold_min": 1356.0
     },
     "options": [
@@ -1001,7 +1487,7 @@
         "type": "HOLD",
         "train_id": "96227",
         "at_station": "S3486",
-        "minutes": 5.0,
+        "minutes": 3,
         "score": -0.1
       }
     ],
@@ -1019,7 +1505,7 @@
         "2024-01-05 23:39:00+00:00"
       ],
       "severity": "High",
-      "lead_min": 27.0,
+      "lead_min": 15.0,
       "required_hold_min": 7149.0
     },
     "options": [
@@ -1034,7 +1520,7 @@
         "type": "HOLD",
         "train_id": "19808",
         "at_station": "S3075",
-        "minutes": 5.0,
+        "minutes": 3,
         "score": -0.1
       }
     ],
@@ -1052,7 +1538,7 @@
         "2024-01-01 09:09:30+00:00"
       ],
       "severity": "High",
-      "lead_min": 27.0,
+      "lead_min": 15.0,
       "required_hold_min": 519.5
     },
     "options": [
@@ -1067,7 +1553,7 @@
         "type": "HOLD",
         "train_id": "16616",
         "at_station": "S1766",
-        "minutes": 5.0,
+        "minutes": 3,
         "score": -0.1
       }
     ],
@@ -1088,7 +1574,7 @@
         "2024-01-01 01:27:00+00:00"
       ],
       "severity": "High",
-      "lead_min": 29.0
+      "lead_min": 17.0
     },
     "options": [
       {
@@ -1102,7 +1588,71 @@
         "type": "HOLD",
         "train_id": "2515",
         "at_station": "S7690",
-        "minutes": 5.0,
+        "minutes": 3,
+        "score": -0.1
+      }
+    ],
+    "tradeoffs": "Short hold vs safer longer hold; impact estimated via ETA deltas."
+  },
+  {
+    "risk_ref": {
+      "type": "block_capacity",
+      "block_id": "B26689",
+      "u": "S7690",
+      "v": "S6201",
+      "train_ids": [
+        "2515",
+        "22653"
+      ],
+      "time_window": [
+        "2024-01-01 00:32:00+00:00",
+        "2024-01-01 01:27:00+00:00"
+      ],
+      "severity": "High",
+      "lead_min": 17.0
+    },
+    "options": [
+      {
+        "type": "SPEED_TUNE",
+        "train_id": "2515",
+        "block_id": "B26689",
+        "speed_factor": 0.95,
+        "score": -0.02
+      }
+    ],
+    "tradeoffs": "Within policy, reduce run-time by 5% on this block."
+  },
+  {
+    "risk_ref": {
+      "type": "headway",
+      "block_id": "B26689",
+      "u": "S7690",
+      "v": "S6201",
+      "train_ids": [
+        "2515",
+        "22653"
+      ],
+      "time_window": [
+        "2024-01-01 00:32:00+00:00",
+        "2024-01-01 01:02:00+00:00"
+      ],
+      "severity": "High",
+      "lead_min": 17.0,
+      "required_hold_min": 227.0
+    },
+    "options": [
+      {
+        "type": "HOLD",
+        "train_id": "2515",
+        "at_station": "S7690",
+        "minutes": 2.0,
+        "score": 0.0
+      },
+      {
+        "type": "HOLD",
+        "train_id": "2515",
+        "at_station": "S7690",
+        "minutes": 3,
         "score": -0.1
       }
     ],
@@ -1123,26 +1673,19 @@
         "2024-01-01 01:02:00+00:00"
       ],
       "severity": "High",
-      "lead_min": 29.0,
+      "lead_min": 17.0,
       "required_hold_min": 227.0
     },
     "options": [
       {
-        "type": "HOLD",
+        "type": "SPEED_TUNE",
         "train_id": "2515",
-        "at_station": "S7690",
-        "minutes": 2.0,
-        "score": 0.0
-      },
-      {
-        "type": "HOLD",
-        "train_id": "2515",
-        "at_station": "S7690",
-        "minutes": 5.0,
-        "score": -0.1
+        "block_id": "B26689",
+        "speed_factor": 0.95,
+        "score": -0.02
       }
     ],
-    "tradeoffs": "Short hold vs safer longer hold; impact estimated via ETA deltas."
+    "tradeoffs": "Within policy, reduce run-time by 5% on this block."
   },
   {
     "risk_ref": {
@@ -1155,8 +1698,8 @@
         "2024-01-01 00:35:00+00:00",
         "2024-01-01 23:08:00+00:00"
       ],
-      "severity": "Medium",
-      "lead_min": 32.0,
+      "severity": "High",
+      "lead_min": 20.0,
       "required_hold_min": 1353.0
     },
     "options": [
@@ -1171,7 +1714,7 @@
         "type": "HOLD",
         "train_id": "96341",
         "at_station": "S3486",
-        "minutes": 5.0,
+        "minutes": 3,
         "score": -0.1
       }
     ],
@@ -1192,8 +1735,73 @@
         "2024-01-01 00:45:00+00:00",
         "2024-01-01 02:02:00+00:00"
       ],
-      "severity": "Medium",
-      "lead_min": 42.0
+      "severity": "High",
+      "lead_min": 30.0
+    },
+    "options": [
+      {
+        "type": "HOLD",
+        "train_id": "98003",
+        "at_station": "S1774",
+        "minutes": 2.0,
+        "score": 0.0
+      },
+      {
+        "type": "HOLD",
+        "train_id": "98003",
+        "at_station": "S1774",
+        "minutes": 3,
+        "score": -0.1
+      }
+    ],
+    "tradeoffs": "Short hold vs safer longer hold; impact estimated via ETA deltas."
+  },
+  {
+    "risk_ref": {
+      "type": "block_capacity",
+      "block_id": "B6190",
+      "u": "S1774",
+      "v": "S5819",
+      "train_ids": [
+        "98001",
+        "98003",
+        "98005"
+      ],
+      "time_window": [
+        "2024-01-01 00:45:00+00:00",
+        "2024-01-01 02:02:00+00:00"
+      ],
+      "severity": "High",
+      "lead_min": 30.0
+    },
+    "options": [
+      {
+        "type": "SPEED_TUNE",
+        "train_id": "98003",
+        "block_id": "B6190",
+        "speed_factor": 0.95,
+        "score": -0.02
+      }
+    ],
+    "tradeoffs": "Within policy, reduce run-time by 5% on this block."
+  },
+  {
+    "risk_ref": {
+      "type": "headway",
+      "block_id": "B6190",
+      "u": "S1774",
+      "v": "S5819",
+      "train_ids": [
+        "98003",
+        "98005"
+      ],
+      "time_window": [
+        "2024-01-01 00:45:00+00:00",
+        "2024-01-01 01:45:00+00:00"
+      ],
+      "severity": "High",
+      "lead_min": 30.0,
+      "required_hold_min": 78.0
     },
     "options": [
       {
@@ -1207,7 +1815,7 @@
         "type": "HOLD",
         "train_id": "98005",
         "at_station": "S1774",
-        "minutes": 5.0,
+        "minutes": 3,
         "score": -0.1
       }
     ],
@@ -1227,27 +1835,20 @@
         "2024-01-01 00:45:00+00:00",
         "2024-01-01 01:45:00+00:00"
       ],
-      "severity": "Medium",
-      "lead_min": 42.0,
+      "severity": "High",
+      "lead_min": 30.0,
       "required_hold_min": 78.0
     },
     "options": [
       {
-        "type": "HOLD",
+        "type": "SPEED_TUNE",
         "train_id": "98005",
-        "at_station": "S1774",
-        "minutes": 2.0,
-        "score": 0.0
-      },
-      {
-        "type": "HOLD",
-        "train_id": "98005",
-        "at_station": "S1774",
-        "minutes": 5.0,
-        "score": -0.1
+        "block_id": "B6190",
+        "speed_factor": 0.95,
+        "score": -0.02
       }
     ],
-    "tradeoffs": "Short hold vs safer longer hold; impact estimated via ETA deltas."
+    "tradeoffs": "Within policy, reduce run-time by 5% on this block."
   },
   {
     "risk_ref": {
@@ -1260,8 +1861,8 @@
         "2024-01-01 00:45:00+00:00",
         "2024-01-04 04:24:00+00:00"
       ],
-      "severity": "Medium",
-      "lead_min": 42.0,
+      "severity": "High",
+      "lead_min": 30.0,
       "required_hold_min": 4539.0
     },
     "options": [
@@ -1276,7 +1877,7 @@
         "type": "HOLD",
         "train_id": "69106",
         "at_station": "S0083",
-        "minutes": 5.0,
+        "minutes": 3,
         "score": -0.1
       }
     ],
@@ -1294,7 +1895,7 @@
         "2024-01-02 00:29:30+00:00"
       ],
       "severity": "Medium",
-      "lead_min": 44.0,
+      "lead_min": 32.0,
       "required_hold_min": 1422.5
     },
     "options": [
@@ -1309,7 +1910,7 @@
         "type": "HOLD",
         "train_id": "96653",
         "at_station": "S3486",
-        "minutes": 5.0,
+        "minutes": 3,
         "score": -0.1
       }
     ],
@@ -1327,7 +1928,7 @@
         "2024-01-02 00:33:30+00:00"
       ],
       "severity": "Medium",
-      "lead_min": 52.0,
+      "lead_min": 40.0,
       "required_hold_min": 1418.5
     },
     "options": [
@@ -1342,7 +1943,7 @@
         "type": "HOLD",
         "train_id": "96121",
         "at_station": "S3486",
-        "minutes": 5.0,
+        "minutes": 3,
         "score": -0.1
       }
     ],
@@ -1360,7 +1961,7 @@
         "2024-01-02 00:31:30+00:00"
       ],
       "severity": "Medium",
-      "lead_min": 54.0,
+      "lead_min": 42.0,
       "required_hold_min": 1414.5
     },
     "options": [
@@ -1375,7 +1976,7 @@
         "type": "HOLD",
         "train_id": "96119",
         "at_station": "S3486",
-        "minutes": 5.0,
+        "minutes": 3,
         "score": -0.1
       }
     ],
@@ -1396,7 +1997,7 @@
         "2024-01-01 01:57:00+00:00"
       ],
       "severity": "Medium",
-      "lead_min": 59.0
+      "lead_min": 47.0
     },
     "options": [
       {
@@ -1410,7 +2011,71 @@
         "type": "HOLD",
         "train_id": "22655",
         "at_station": "S7690",
-        "minutes": 5.0,
+        "minutes": 3,
+        "score": -0.1
+      }
+    ],
+    "tradeoffs": "Short hold vs safer longer hold; impact estimated via ETA deltas."
+  },
+  {
+    "risk_ref": {
+      "type": "block_capacity",
+      "block_id": "B26689",
+      "u": "S7690",
+      "v": "S6201",
+      "train_ids": [
+        "22653",
+        "22655"
+      ],
+      "time_window": [
+        "2024-01-01 01:02:00+00:00",
+        "2024-01-01 01:57:00+00:00"
+      ],
+      "severity": "Medium",
+      "lead_min": 47.0
+    },
+    "options": [
+      {
+        "type": "SPEED_TUNE",
+        "train_id": "22655",
+        "block_id": "B26689",
+        "speed_factor": 0.95,
+        "score": -0.02
+      }
+    ],
+    "tradeoffs": "Within policy, reduce run-time by 5% on this block."
+  },
+  {
+    "risk_ref": {
+      "type": "headway",
+      "block_id": "B26689",
+      "u": "S7690",
+      "v": "S6201",
+      "train_ids": [
+        "22653",
+        "22655"
+      ],
+      "time_window": [
+        "2024-01-01 01:02:00+00:00",
+        "2024-01-01 01:27:00+00:00"
+      ],
+      "severity": "Medium",
+      "lead_min": 47.0,
+      "required_hold_min": 222.0
+    },
+    "options": [
+      {
+        "type": "HOLD",
+        "train_id": "22655",
+        "at_station": "S7690",
+        "minutes": 2.0,
+        "score": 0.0
+      },
+      {
+        "type": "HOLD",
+        "train_id": "22655",
+        "at_station": "S7690",
+        "minutes": 3,
         "score": -0.1
       }
     ],
@@ -1431,25 +2096,408 @@
         "2024-01-01 01:27:00+00:00"
       ],
       "severity": "Medium",
-      "lead_min": 59.0,
+      "lead_min": 47.0,
       "required_hold_min": 222.0
     },
     "options": [
       {
-        "type": "HOLD",
+        "type": "SPEED_TUNE",
         "train_id": "22655",
-        "at_station": "S7690",
+        "block_id": "B26689",
+        "speed_factor": 0.95,
+        "score": -0.02
+      }
+    ],
+    "tradeoffs": "Within policy, reduce run-time by 5% on this block."
+  },
+  {
+    "risk_ref": {
+      "type": "platform_overflow",
+      "station_id": "S3307",
+      "train_ids": [
+        "54810"
+      ],
+      "time_window": [
+        "2024-01-01 01:10:00+00:00",
+        "2024-01-01 06:45:00+00:00"
+      ],
+      "severity": "Medium",
+      "lead_min": 55.0,
+      "required_hold_min": 335.0
+    },
+    "options": [
+      {
+        "type": "HOLD",
+        "train_id": "54810",
+        "at_station": "S3307",
         "minutes": 2.0,
         "score": 0.0
       },
       {
         "type": "HOLD",
-        "train_id": "22655",
-        "at_station": "S7690",
-        "minutes": 5.0,
+        "train_id": "54810",
+        "at_station": "S3307",
+        "minutes": 3,
+        "score": -0.1
+      }
+    ],
+    "tradeoffs": "Hold to avoid platform overflow; reassignment possible if multiple platforms."
+  },
+  {
+    "risk_ref": {
+      "type": "platform_overflow",
+      "station_id": "S4451",
+      "train_ids": [
+        "22115"
+      ],
+      "time_window": [
+        "2024-01-01 01:10:00+00:00",
+        "2024-01-01 01:12:00+00:00"
+      ],
+      "severity": "Medium",
+      "lead_min": 55.0,
+      "required_hold_min": 2.0
+    },
+    "options": [
+      {
+        "type": "HOLD",
+        "train_id": "22115",
+        "at_station": "S4451",
+        "minutes": 2.0,
+        "score": 0.0
+      },
+      {
+        "type": "HOLD",
+        "train_id": "22115",
+        "at_station": "S4451",
+        "minutes": 3,
+        "score": -0.1
+      }
+    ],
+    "tradeoffs": "Hold to avoid platform overflow; reassignment possible if multiple platforms."
+  },
+  {
+    "risk_ref": {
+      "type": "block_capacity",
+      "block_id": "B15364",
+      "u": "S4451",
+      "v": "S7528",
+      "train_ids": [
+        "1037",
+        "1045"
+      ],
+      "time_window": [
+        "2024-01-01 01:12:00+00:00",
+        "2024-01-01 01:30:00+00:00"
+      ],
+      "severity": "Medium",
+      "lead_min": 57.0
+    },
+    "options": [
+      {
+        "type": "HOLD",
+        "train_id": "1045",
+        "at_station": "S4451",
+        "minutes": 2.0,
+        "score": 0.0
+      },
+      {
+        "type": "HOLD",
+        "train_id": "1045",
+        "at_station": "S4451",
+        "minutes": 3,
         "score": -0.1
       }
     ],
     "tradeoffs": "Short hold vs safer longer hold; impact estimated via ETA deltas."
+  },
+  {
+    "risk_ref": {
+      "type": "block_capacity",
+      "block_id": "B15364",
+      "u": "S4451",
+      "v": "S7528",
+      "train_ids": [
+        "1037",
+        "1045"
+      ],
+      "time_window": [
+        "2024-01-01 01:12:00+00:00",
+        "2024-01-01 01:30:00+00:00"
+      ],
+      "severity": "Medium",
+      "lead_min": 57.0
+    },
+    "options": [
+      {
+        "type": "SPEED_TUNE",
+        "train_id": "1045",
+        "block_id": "B15364",
+        "speed_factor": 0.95,
+        "score": -0.02
+      }
+    ],
+    "tradeoffs": "Within policy, reduce run-time by 5% on this block."
+  },
+  {
+    "risk_ref": {
+      "type": "headway",
+      "block_id": "B15364",
+      "u": "S4451",
+      "v": "S7528",
+      "train_ids": [
+        "1037",
+        "1045"
+      ],
+      "time_window": [
+        "2024-01-01 01:12:00+00:00",
+        "2024-01-01 01:30:00+00:00"
+      ],
+      "severity": "Medium",
+      "lead_min": 57.0,
+      "required_hold_min": 95.5
+    },
+    "options": [
+      {
+        "type": "HOLD",
+        "train_id": "1045",
+        "at_station": "S4451",
+        "minutes": 2.0,
+        "score": 0.0
+      },
+      {
+        "type": "HOLD",
+        "train_id": "1045",
+        "at_station": "S4451",
+        "minutes": 3,
+        "score": -0.1
+      }
+    ],
+    "tradeoffs": "Short hold vs safer longer hold; impact estimated via ETA deltas."
+  },
+  {
+    "risk_ref": {
+      "type": "headway",
+      "block_id": "B15364",
+      "u": "S4451",
+      "v": "S7528",
+      "train_ids": [
+        "1037",
+        "1045"
+      ],
+      "time_window": [
+        "2024-01-01 01:12:00+00:00",
+        "2024-01-01 01:30:00+00:00"
+      ],
+      "severity": "Medium",
+      "lead_min": 57.0,
+      "required_hold_min": 95.5
+    },
+    "options": [
+      {
+        "type": "SPEED_TUNE",
+        "train_id": "1045",
+        "block_id": "B15364",
+        "speed_factor": 0.95,
+        "score": -0.02
+      }
+    ],
+    "tradeoffs": "Within policy, reduce run-time by 5% on this block."
+  },
+  {
+    "risk_ref": {
+      "type": "platform_overflow",
+      "station_id": "S3486",
+      "train_ids": [
+        "96655"
+      ],
+      "time_window": [
+        "2024-01-01 01:12:00+00:00",
+        "2024-01-02 01:55:00+00:00"
+      ],
+      "severity": "Medium",
+      "lead_min": 57.0,
+      "required_hold_min": 1483.0
+    },
+    "options": [
+      {
+        "type": "HOLD",
+        "train_id": "96655",
+        "at_station": "S3486",
+        "minutes": 2.0,
+        "score": 0.0
+      },
+      {
+        "type": "HOLD",
+        "train_id": "96655",
+        "at_station": "S3486",
+        "minutes": 3,
+        "score": -0.1
+      }
+    ],
+    "tradeoffs": "Hold to avoid platform overflow; reassignment possible if multiple platforms."
+  },
+  {
+    "risk_ref": {
+      "type": "block_capacity",
+      "block_id": "B15364",
+      "u": "S4451",
+      "v": "S7528",
+      "train_ids": [
+        "1037",
+        "1045",
+        "22115"
+      ],
+      "time_window": [
+        "2024-01-01 01:14:00+00:00",
+        "2024-01-01 01:32:00+00:00"
+      ],
+      "severity": "Medium",
+      "lead_min": 59.0
+    },
+    "options": [
+      {
+        "type": "HOLD",
+        "train_id": "1045",
+        "at_station": "S4451",
+        "minutes": 2.0,
+        "score": 0.0
+      },
+      {
+        "type": "HOLD",
+        "train_id": "1045",
+        "at_station": "S4451",
+        "minutes": 3,
+        "score": -0.1
+      }
+    ],
+    "tradeoffs": "Short hold vs safer longer hold; impact estimated via ETA deltas."
+  },
+  {
+    "risk_ref": {
+      "type": "block_capacity",
+      "block_id": "B15364",
+      "u": "S4451",
+      "v": "S7528",
+      "train_ids": [
+        "1037",
+        "1045",
+        "22115"
+      ],
+      "time_window": [
+        "2024-01-01 01:14:00+00:00",
+        "2024-01-01 01:32:00+00:00"
+      ],
+      "severity": "Medium",
+      "lead_min": 59.0
+    },
+    "options": [
+      {
+        "type": "SPEED_TUNE",
+        "train_id": "1045",
+        "block_id": "B15364",
+        "speed_factor": 0.95,
+        "score": -0.02
+      }
+    ],
+    "tradeoffs": "Within policy, reduce run-time by 5% on this block."
+  },
+  {
+    "risk_ref": {
+      "type": "headway",
+      "block_id": "B15364",
+      "u": "S4451",
+      "v": "S7528",
+      "train_ids": [
+        "1037",
+        "22115"
+      ],
+      "time_window": [
+        "2024-01-01 01:14:00+00:00",
+        "2024-01-01 01:30:00+00:00"
+      ],
+      "severity": "Medium",
+      "lead_min": 59.0,
+      "required_hold_min": 93.5
+    },
+    "options": [
+      {
+        "type": "HOLD",
+        "train_id": "22115",
+        "at_station": "S4451",
+        "minutes": 2.0,
+        "score": 0.0
+      },
+      {
+        "type": "HOLD",
+        "train_id": "22115",
+        "at_station": "S4451",
+        "minutes": 3,
+        "score": -0.1
+      }
+    ],
+    "tradeoffs": "Short hold vs safer longer hold; impact estimated via ETA deltas."
+  },
+  {
+    "risk_ref": {
+      "type": "headway",
+      "block_id": "B15364",
+      "u": "S4451",
+      "v": "S7528",
+      "train_ids": [
+        "1037",
+        "22115"
+      ],
+      "time_window": [
+        "2024-01-01 01:14:00+00:00",
+        "2024-01-01 01:30:00+00:00"
+      ],
+      "severity": "Medium",
+      "lead_min": 59.0,
+      "required_hold_min": 93.5
+    },
+    "options": [
+      {
+        "type": "SPEED_TUNE",
+        "train_id": "22115",
+        "block_id": "B15364",
+        "speed_factor": 0.95,
+        "score": -0.02
+      }
+    ],
+    "tradeoffs": "Within policy, reduce run-time by 5% on this block."
+  },
+  {
+    "risk_ref": {
+      "type": "platform_overflow",
+      "station_id": "S3486",
+      "train_ids": [
+        "12167"
+      ],
+      "time_window": [
+        "2024-01-01 01:14:00+00:00",
+        "2024-01-01 23:06:00+00:00"
+      ],
+      "severity": "Medium",
+      "lead_min": 59.0,
+      "required_hold_min": 1312.0
+    },
+    "options": [
+      {
+        "type": "HOLD",
+        "train_id": "12167",
+        "at_station": "S3486",
+        "minutes": 2.0,
+        "score": 0.0
+      },
+      {
+        "type": "HOLD",
+        "train_id": "12167",
+        "at_station": "S3486",
+        "minutes": 3,
+        "score": -0.1
+      }
+    ],
+    "tradeoffs": "Hold to avoid platform overflow; reassignment possible if multiple platforms."
   }
 ]

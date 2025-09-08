@@ -2,7 +2,9 @@ param(
   [Parameter(Position=0, Mandatory=$true)][string]$ScopeId,
   [Parameter(Position=1, Mandatory=$true)][string]$Date,
   [Parameter(Position=2, Mandatory=$false)][int]$HorizonMin = 60,
-  [Parameter(Position=3, Mandatory=$false)][string]$T0 = ''
+  [Parameter(Position=3, Mandatory=$false)][string]$T0 = '',
+  [Parameter(Position=4, Mandatory=$false)][int]$MaxHoldMin = 3,
+  [Parameter(Position=5, Mandatory=$false)][int]$MaxHoldsPerTrain = 2
 )
 
 $ErrorActionPreference = 'Stop'
@@ -18,14 +20,25 @@ if (-not (Test-Path $BlockPath)) { throw "Missing block occupancy parquet in $Ar
 $RadarPath = Join-Path $ArtifactDir 'conflict_radar.json'
 if (-not (Test-Path $RadarPath)) { throw "Missing conflict_radar.json. Run risk first." }
 
+# Optional priorities CSV
+$PriorityPath = "data/train_priority.csv"
+
 Write-Host "[OPT] Proposing actions for '$ScopeId' on '$Date' (H=$HorizonMin min)"
 
 python -c "import sys,json,os; import pandas as pd; from src.opt.engine import propose, save; argv=sys.argv[1:];
-art=argv[0]; edges_p=argv[1]; nodes_p=argv[2]; block_p=argv[3]; radar_p=argv[4]; h=argv[5]; t0=argv[6] if len(argv)>6 else '';
+art,edges_p,nodes_p,block_p,radar_p,h,t0,max_hold,max_hpt,prio_p = argv[:10];
 edges=pd.read_parquet(edges_p); nodes=pd.read_parquet(nodes_p); block=pd.read_parquet(block_p); risks=json.load(open(radar_p));
-rec, alts, metrics, audit = propose(edges, nodes, block, risks, t0=(t0 or None), horizon_min=int(h));
+priorities=None
+if prio_p and os.path.exists(prio_p):
+    try:
+        dfp=pd.read_csv(prio_p, dtype=str)
+        if 'train_id' in dfp.columns and 'priority' in dfp.columns:
+            priorities={str(k):int(v) for k,v in zip(dfp['train_id'], dfp['priority'])}
+    except Exception:
+        priorities=None
+rec, alts, metrics, audit = propose(edges, nodes, block, risks, t0=(t0 or None), horizon_min=int(h), max_hold_min=int(max_hold), max_holds_per_train=int(max_hpt), priorities=priorities);
 save(rec, alts, metrics, audit, art);
-out=dict(metrics); out['runtime_sec']=audit.get('runtime_sec', 0.0); print(json.dumps(out, indent=2))" $ArtifactDir "$ArtifactDir/section_edges.parquet" "$ArtifactDir/section_nodes.parquet" $BlockPath $RadarPath $HorizonMin $T0
+out=dict(metrics); out['runtime_sec']=audit.get('runtime_sec', 0.0); out['max_hold_min']=int(max_hold); out['max_holds_per_train']=int(max_hpt); print(json.dumps(out, indent=2))" $ArtifactDir "$ArtifactDir/section_edges.parquet" "$ArtifactDir/section_nodes.parquet" $BlockPath $RadarPath $HorizonMin $T0 $MaxHoldMin $MaxHoldsPerTrain $PriorityPath
 
 if ($LASTEXITCODE -ne 0) { throw "Optimization failed (exit $LASTEXITCODE)" }
 

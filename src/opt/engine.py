@@ -34,6 +34,13 @@ import pandas as pd
 
 __all__ = ["propose", "save"]
 
+try:
+    from src.opt.milp import solve_local, SOLVER_AVAILABLE  # type: ignore
+except Exception:
+    SOLVER_AVAILABLE = False
+    def solve_local(**kwargs):
+        return None
+
 
 def _to_utc(s: pd.Series | None) -> pd.Series:
     if s is None:
@@ -61,9 +68,19 @@ def propose(
     horizon_min: int = 60,
     priorities: Optional[Dict[str, int]] = None,
     max_hold_min: int = 5,
+    max_holds_per_train: int = 2,
 ) -> tuple[List[dict], List[dict], Dict[str, float], Dict[str, object]]:
     t_start = time.time()
     edges = edges_df.set_index("block_id") if not edges_df.empty else pd.DataFrame()
+    # Station platform counts (for slot selection)
+    plat_count: Dict[str, int] = {}
+    if not nodes_df.empty and "station_id" in nodes_df.columns:
+        try:
+            tmp = nodes_df.set_index("station_id")["platforms"] if "platforms" in nodes_df.columns else None
+            if tmp is not None:
+                plat_count = {str(k): int(v) for k, v in tmp.fillna(1).to_dict().items()}
+        except Exception:
+            plat_count = {}
 
     bo = block_occ_df.copy()
     if bo.empty:
@@ -95,9 +112,53 @@ def propose(
     by_block = {bid: g.sort_values("entry_time").copy() for bid, g in bo.groupby("block_id")}
     by_train = {tid: g.sort_values("entry_time").copy() for tid, g in bo.groupby("train_id")}
 
+    # Precompute earliest-free platform slot assignment within horizon (smart platform selection)
+    assigned_slot: Dict[tuple, int] = {}
+    try:
+        if not bo.empty and plat_count:
+            # Build arrivals to stations with times in horizon
+            arr = bo[["train_id", "v", "exit_time"]].rename(columns={"v": "station_id", "exit_time": "arr_time"}).copy()
+            arr["arr_time"] = pd.to_datetime(arr["arr_time"], utc=True, errors="coerce")
+            if t0 is None:
+                t0_ts = arr["arr_time"].min()
+            else:
+                t0_ts = pd.to_datetime(t0, utc=True)
+            t1_ts = t0_ts + pd.Timedelta(minutes=horizon_min)
+            arr = arr[(arr["arr_time"] >= t0_ts) & (arr["arr_time"] <= t1_ts)]
+            # Dwell per station
+            dwell_map: Dict[str, float] = {}
+            if not nodes_df.empty and "station_id" in nodes_df.columns:
+                if "min_dwell_min" in nodes_df.columns:
+                    dwell_map = {str(k): float(v) for k, v in nodes_df.set_index("station_id")["min_dwell_min"].fillna(2.0).to_dict().items()}
+            # Initialize per-station slot availability
+            slot_avail: Dict[str, List[pd.Timestamp]] = {}
+            for sid, nplat in plat_count.items():
+                n = max(1, int(nplat))
+                slot_avail[sid] = [pd.Timestamp.min.tz_localize("UTC")] * n
+            # Assign slots greedily by earliest available
+            for _, row in arr.sort_values("arr_time").iterrows():
+                sid = str(row["station_id"])
+                tid = str(row["train_id"])
+                at = row["arr_time"]
+                if sid not in slot_avail:
+                    continue
+                slots = slot_avail[sid]
+                # choose slot with earliest availability
+                idx = min(range(len(slots)), key=lambda i: slots[i])
+                start = max(at, slots[idx])
+                dwell = float(dwell_map.get(sid, 2.0))
+                dep = start + pd.Timedelta(minutes=dwell)
+                slots[idx] = dep
+                slot_avail[sid] = slots
+                assigned_slot[(tid, sid)] = idx
+    except Exception:
+        assigned_slot = {}
+
     rec_plan: List[dict] = []
     alt_options: List[dict] = []
     targeted = 0
+
+    holds_count: Dict[str, int] = {}
 
     for r in risks_h:
         rtype = r.get("type")
@@ -110,7 +171,20 @@ def propose(
             if len(trains) == 1:
                 follower = trains[0]
             else:
-                follower = sorted(trains, key=lambda t: (_priority(t, priorities), t))[-1]
+                # Prefer holding the train with lower priority and fewer holds so far
+                follower = sorted(
+                    trains,
+                    key=lambda t: (
+                        _priority(t, priorities),
+                        holds_count.get(t, 0),
+                        t,
+                    ),
+                )[-1]
+                # Fairness: if chosen exceeds max_holds_per_train, try the other candidate
+                if holds_count.get(follower, 0) >= max_holds_per_train and len(trains) == 2:
+                    other = [t for t in trains if t != follower][0]
+                    if holds_count.get(other, 0) < max_holds_per_train:
+                        follower = other
 
             need = float(r.get("required_hold_min", 0.0)) if rtype == "headway" else 2.0
             hold_min = min(max_hold_min, max(2.0, need))
@@ -145,6 +219,7 @@ def propose(
                             gap = (prev_exit + pd.Timedelta(minutes=headway_min) - row["entry_time"]).total_seconds() / 60.0
                             action["minutes"] = round(min(max_hold_min, max(2.0, gap)), 1)
             rec_plan.append(action)
+            holds_count[follower] = holds_count.get(follower, 0) + 1
             targeted += 1
 
             # Alternatives (2 vs 5 minutes)
@@ -157,21 +232,95 @@ def propose(
                 "tradeoffs": "Short hold vs safer longer hold; impact estimated via ETA deltas.",
             }
             alt_options.append(alt)
+
+            # If follower has higher priority than leader, propose OVERTAKE as alternative (leader hold)
+            if len(trains) >= 2:
+                leader = [t for t in trains if t != follower][0]
+                # Optionally query small local solver for a decision
+                decision = None
+                if SOLVER_AVAILABLE:
+                    decision = solve_local(
+                        headway_min=float(edges_df.set_index("block_id").loc[block_id, "headway"]) if "headway" in edges_df.columns else 0.0,
+                        follower_hold_min=float(action["minutes"]),
+                        leader_hold_min=float(action["minutes"]),
+                        follower_priority=_priority(follower, priorities),
+                        leader_priority=_priority(leader, priorities),
+                    )
+                if decision and decision.get("action") == "HOLD_LEADER" or _priority(follower, priorities) > _priority(leader, priorities):
+                    alt_options.append({
+                        "risk_ref": r,
+                        "options": [
+                            {"type": "OVERTAKE", "train_id": leader, "at_station": u, "minutes": action["minutes"], "score": -0.05}
+                        ],
+                        "tradeoffs": "Hold leader to allow higher-priority follower to pass at station.",
+                    })
+
+            # SPEED_TUNE alternative: small run-time reduction on the conflicting block
+            alt_options.append({
+                "risk_ref": r,
+                "options": [
+                    {"type": "SPEED_TUNE", "train_id": follower, "block_id": block_id, "speed_factor": 0.95, "score": -0.02}
+                ],
+                "tradeoffs": "Within policy, reduce run-time by 5% on this block.",
+            })
         elif rtype == "platform_overflow":
             sid = r.get("station_id")
             tr = trains[0] if trains else None
-            if tr is None:
+            if tr is None or not sid:
                 continue
+            # Prefer holding upstream before entering the station to smooth arrivals
+            # Find the corresponding incoming block (u->sid) for this train near the risk time
+            ts = pd.to_datetime(r.get("time_window")[0], utc=True, errors="coerce") if r.get("time_window") else None
+            u_choice = None
+            g_tr = by_train.get(tr)
+            if g_tr is not None and not g_tr.empty and ts is not None:
+                cand = g_tr[(g_tr["v"] == sid)].copy()
+                if not cand.empty:
+                    cand["arr_gap"] = (cand["exit_time"] - ts).abs()
+                    row = cand.sort_values("arr_gap").iloc[0]
+                    u_choice = row.get("u")
+            at_station = u_choice if u_choice else sid
+            # Fairness-aware selection if multiple trains present (rare in our risk record)
+            pick = tr
+            if len(trains) > 1:
+                pick = sorted(
+                    trains,
+                    key=lambda t: (
+                        _priority(t, priorities),
+                        holds_count.get(t, 0),
+                        t,
+                    ),
+                )[-1]
+            # Propose upstream hold and a platform reassignment advisory
             action = {
                 "train_id": tr,
                 "type": "HOLD",
-                "at_station": sid,
+                "at_station": at_station,
                 "minutes": min(3.0, max_hold_min),
-                "reason": "platform_overflow",
-                "why": f"Reduce concurrent dwells at {sid}",
+                "reason": "platform_overflow_upstream" if at_station != sid else "platform_overflow",
+                "why": f"Smooth arrival into {sid} by holding at {at_station}",
             }
             rec_plan.append(action)
+            holds_count[pick] = holds_count.get(pick, 0) + 1
             targeted += 1
+            # Advisory: PLATFORM_REASSIGN (non-operative without per-platform IDs)
+            # Choose a concrete platform slot index: prefer earliest-free precomputed slot
+            slot_idx = assigned_slot.get((str(tr), str(sid)))
+            if slot_idx is None:
+                try:
+                    nplat = int(plat_count.get(str(sid), 1))
+                    if nplat > 1:
+                        slot_idx = abs(hash(f"{sid}-{tr}")) % nplat
+                except Exception:
+                    slot_idx = None
+            rec_plan.append({
+                "train_id": tr,
+                "type": "PLATFORM_REASSIGN",
+                "station_id": sid,
+                "platform": (int(slot_idx) if slot_idx is not None else "any"),
+                "reason": "spread_load",
+                "why": f"Use alternate platform at {sid} if available",
+            })
             alt_options.append({
                 "risk_ref": r,
                 "options": [
@@ -191,6 +340,7 @@ def propose(
         "strategy": "heuristic",
         "runtime_sec": round(time.time() - t_start, 3),
         "max_hold_min": max_hold_min,
+        "max_holds_per_train": max_holds_per_train,
         "horizon_min": horizon_min,
         "t0": str(t0),
     }
@@ -211,4 +361,3 @@ def save(
     (p / "alt_options.json").write_text(json.dumps(alt_options, indent=2))
     (p / "plan_metrics.json").write_text(json.dumps(plan_metrics, indent=2))
     (p / "audit_log.json").write_text(json.dumps(audit_log, indent=2))
-

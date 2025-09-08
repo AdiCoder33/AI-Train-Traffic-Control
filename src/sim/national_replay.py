@@ -75,7 +75,13 @@ def _itinerary_from_events(events_df: pd.DataFrame, graph: SectionGraph) -> Dict
     return itins
 
 
-def run(events_df: pd.DataFrame, graph: SectionGraph) -> SimResult:
+def run(
+    events_df: pd.DataFrame,
+    graph: SectionGraph,
+    *,
+    per_train_speed: Dict[tuple, float] | None = None,
+    platform_override: Dict[tuple, int] | None = None,
+) -> SimResult:
     # Normalize time columns
     df = events_df.copy()
     for c in ("sched_arr", "sched_dep", "act_arr", "act_dep"):
@@ -89,9 +95,10 @@ def run(events_df: pd.DataFrame, graph: SectionGraph) -> SimResult:
     for bid, (_, _, cap) in graph.block_attr.items():
         block_heap[bid] = [pd.Timestamp.min.tz_localize("UTC")] * max(1, cap)
 
-    plat_heap: Dict[str, List[pd.Timestamp]] = {}
+    # Platform availability per slot (track slot index for reassignment)
+    plat_avail: Dict[str, List[pd.Timestamp]] = {}
     for sid, (cap, _) in graph.station_attr.items():
-        plat_heap[sid] = [pd.Timestamp.min.tz_localize("UTC")] * max(1, cap)
+        plat_avail[sid] = [pd.Timestamp.min.tz_localize("UTC")] * max(1, cap)
 
     block_records: List[dict] = []
     platform_records: List[dict] = []
@@ -102,6 +109,17 @@ def run(events_df: pd.DataFrame, graph: SectionGraph) -> SimResult:
         start = max(t_req, t_avail)
         wait_min = max(0.0, (start - t_req).total_seconds() / 60.0)
         return start, wait_min
+
+    def _alloc_platform(station_id: str, t_req: pd.Timestamp, dwell_min: float, *, slot_idx: Optional[int] = None) -> Tuple[pd.Timestamp, pd.Timestamp, int, float]:
+        slots = plat_avail[station_id]
+        if slot_idx is None or not (0 <= slot_idx < len(slots)):
+            slot_idx = min(range(len(slots)), key=lambda i: slots[i])
+        start = max(t_req, slots[slot_idx])
+        wait_min = max(0.0, (start - t_req).total_seconds() / 60.0)
+        dep = start + pd.Timedelta(minutes=dwell_min)
+        slots[slot_idx] = dep
+        plat_avail[station_id] = slots
+        return start, dep, slot_idx, wait_min
 
     # Iterate trains in chronological order of their initial departure
     # Robust initial time per train: earliest of any known time columns
@@ -141,19 +159,18 @@ def run(events_df: pd.DataFrame, graph: SectionGraph) -> SimResult:
         if pd.isna(dep_sched0) and pd.notna(arr0):
             dep_sched0 = arr0 + pd.Timedelta(minutes=dwell_u)
 
-        # Allocate platform dwell at origin
-        # Ensure a concrete request time
+        # Allocate platform dwell at origin using per-slot availability (override supported)
         t_origin_req = arr0 if pd.notna(arr0) else dep_sched0
-        start_plat_u, wait_plat0 = _alloc_heap(plat_heap[u0], t_origin_req)
-        dwell_end_u = max(start_plat_u, arr0) + pd.Timedelta(minutes=dwell_u) if pd.notna(arr0) else start_plat_u + pd.Timedelta(minutes=dwell_u)
+        ov_slot_u = None
+        if platform_override is not None:
+            ov_slot_u = platform_override.get((str(train_id), str(u0)))
+        start_plat_u, dwell_end_u, slot_u, wait_plat0 = _alloc_platform(u0, t_origin_req, float(dwell_u), slot_idx=ov_slot_u)
         # Requested departure time respects dwell and schedule
         t_req_dep = max(dep_sched0, dwell_end_u) if pd.notna(dep_sched0) else dwell_end_u
         if wait_plat0 > 0:
             waits.append({"train_id": train_id, "resource": "platform", "id": u0, "start_time": str(arr0), "end_time": str(start_plat_u), "minutes": wait_plat0, "reason": "platform_busy"})
         # Record platform occupancy window at origin
-        platform_records.append({"train_id": train_id, "station_id": u0, "arr_platform": start_plat_u, "dep_platform": t_req_dep})
-        # Release platform slot at dep
-        heapq.heappush(plat_heap[u0], t_req_dep)
+        platform_records.append({"train_id": train_id, "station_id": u0, "arr_platform": start_plat_u, "dep_platform": t_req_dep, "platform_slot": int(slot_u)})
 
         current_time = t_req_dep
         for (u, v) in hops:
@@ -167,6 +184,13 @@ def run(events_df: pd.DataFrame, graph: SectionGraph) -> SimResult:
                 run_min = max(0.0, (arr_v_act - dep_u_act).total_seconds() / 60.0)
             if run_min is None:
                 run_min = float(min_run)
+            # Apply optional speed tuning (factor < 1.0 reduces run time)
+            if per_train_speed is not None:
+                key = (str(train_id), str(bid))
+                if key in per_train_speed:
+                    fac = float(per_train_speed[key])
+                    fac = max(0.8, min(1.0, fac))
+                    run_min = run_min * fac
 
             # Request block at current_time
             entry, wait_block = _alloc_heap(block_heap[bid], current_time)
@@ -198,11 +222,13 @@ def run(events_df: pd.DataFrame, graph: SectionGraph) -> SimResult:
             if pd.isna(dep_sched_v):
                 dep_sched_v = sched_dep_map.get(v, pd.NaT)
 
-            start_plat_v, wait_plat_v = _alloc_heap(plat_heap[v], exit_time)
+            # Allocate platform at v with override slot if provided
+            ov_slot_v = None
+            if platform_override is not None:
+                ov_slot_v = platform_override.get((str(train_id), str(v)))
+            start_plat_v, dwell_end_v, slot_v, wait_plat_v = _alloc_platform(v, exit_time, float(dwell_v), slot_idx=ov_slot_v)
             if wait_plat_v > 0:
                 waits.append({"train_id": train_id, "resource": "platform", "id": v, "start_time": str(exit_time), "end_time": str(start_plat_v), "minutes": wait_plat_v, "reason": "platform_busy"})
-
-            dwell_end_v = start_plat_v + pd.Timedelta(minutes=dwell_v)
             # Respect scheduled/actual departure at v if exists
             next_dep_req = dwell_end_v
             if pd.notna(dep_sched_v):
@@ -210,8 +236,7 @@ def run(events_df: pd.DataFrame, graph: SectionGraph) -> SimResult:
                     next_dep_req = dep_sched_v
 
             # Record platform occupancy at v
-            platform_records.append({"train_id": train_id, "station_id": v, "arr_platform": start_plat_v, "dep_platform": next_dep_req})
-            heapq.heappush(plat_heap[v], next_dep_req)
+            platform_records.append({"train_id": train_id, "station_id": v, "arr_platform": start_plat_v, "dep_platform": next_dep_req, "platform_slot": int(slot_v)})
 
             current_time = next_dep_req
 

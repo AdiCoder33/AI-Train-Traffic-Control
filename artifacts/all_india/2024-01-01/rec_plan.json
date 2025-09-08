@@ -1,19 +1,19 @@
 [
   {
-    "train_id": "64420",
-    "type": "HOLD",
-    "at_station": "S2516",
-    "minutes": 3.0,
-    "reason": "platform_overflow",
-    "why": "Reduce concurrent dwells at S2516"
-  },
-  {
     "train_id": "64076",
     "type": "HOLD",
     "at_station": "S5496",
     "minutes": 3.0,
     "reason": "platform_overflow",
-    "why": "Reduce concurrent dwells at S5496"
+    "why": "Smooth arrival into S5496 by holding at S5496"
+  },
+  {
+    "train_id": "64076",
+    "type": "PLATFORM_REASSIGN",
+    "station_id": "S5496",
+    "platform": "any",
+    "reason": "spread_load",
+    "why": "Use alternate platform at S5496 if available"
   },
   {
     "train_id": "11043",
@@ -21,7 +21,15 @@
     "at_station": "S4451",
     "minutes": 3.0,
     "reason": "platform_overflow",
-    "why": "Reduce concurrent dwells at S4451"
+    "why": "Smooth arrival into S4451 by holding at S4451"
+  },
+  {
+    "train_id": "11043",
+    "type": "PLATFORM_REASSIGN",
+    "station_id": "S4451",
+    "platform": "any",
+    "reason": "spread_load",
+    "why": "Use alternate platform at S4451 if available"
   },
   {
     "train_id": "1705",
@@ -29,7 +37,15 @@
     "at_station": "S0654",
     "minutes": 3.0,
     "reason": "platform_overflow",
-    "why": "Reduce concurrent dwells at S0654"
+    "why": "Smooth arrival into S0654 by holding at S0654"
+  },
+  {
+    "train_id": "1705",
+    "type": "PLATFORM_REASSIGN",
+    "station_id": "S0654",
+    "platform": "any",
+    "reason": "spread_load",
+    "why": "Use alternate platform at S0654 if available"
   },
   {
     "train_id": "22865",
@@ -37,7 +53,15 @@
     "at_station": "S4451",
     "minutes": 3.0,
     "reason": "platform_overflow",
-    "why": "Reduce concurrent dwells at S4451"
+    "why": "Smooth arrival into S4451 by holding at S4451"
+  },
+  {
+    "train_id": "22865",
+    "type": "PLATFORM_REASSIGN",
+    "station_id": "S4451",
+    "platform": "any",
+    "reason": "spread_load",
+    "why": "Use alternate platform at S4451 if available"
   },
   {
     "train_id": "22848",
@@ -52,7 +76,7 @@
     "train_id": "22848",
     "type": "HOLD",
     "at_station": "S4451",
-    "minutes": 5,
+    "minutes": 3,
     "reason": "headway",
     "block_id": "B15364",
     "why": "Resolve headway on B15364 vs 12879"
@@ -67,13 +91,13 @@
     "why": "Resolve block_capacity on B15364 vs 12879, 12811"
   },
   {
-    "train_id": "22848",
+    "train_id": "12811",
     "type": "HOLD",
     "at_station": "S4451",
-    "minutes": 5,
+    "minutes": 3,
     "reason": "headway",
     "block_id": "B15364",
-    "why": "Resolve headway on B15364 vs 12811"
+    "why": "Resolve headway on B15364 vs 22848"
   },
   {
     "train_id": "43001",
@@ -88,7 +112,7 @@
     "train_id": "43001",
     "type": "HOLD",
     "at_station": "S5087",
-    "minutes": 5,
+    "minutes": 3,
     "reason": "headway",
     "block_id": "B17558",
     "why": "Resolve headway on B17558 vs 42001"
@@ -99,7 +123,15 @@
     "at_station": "S3486",
     "minutes": 3.0,
     "reason": "platform_overflow",
-    "why": "Reduce concurrent dwells at S3486"
+    "why": "Smooth arrival into S3486 by holding at S3486"
+  },
+  {
+    "train_id": "95013",
+    "type": "PLATFORM_REASSIGN",
+    "station_id": "S3486",
+    "platform": "any",
+    "reason": "spread_load",
+    "why": "Use alternate platform at S3486 if available"
   },
   {
     "train_id": "22848",
@@ -111,28 +143,28 @@
     "why": "Resolve block_capacity on B15364 vs 12879, 12811, 11043"
   },
   {
-    "train_id": "22848",
+    "train_id": "11043",
     "type": "HOLD",
     "at_station": "S4451",
-    "minutes": 5,
+    "minutes": 3,
     "reason": "headway",
     "block_id": "B15364",
-    "why": "Resolve headway on B15364 vs 11043"
+    "why": "Resolve headway on B15364 vs 22848"
   },
   {
-    "train_id": "22865",
+    "train_id": "22848",
     "type": "HOLD",
     "at_station": "S4451",
     "minutes": 2.0,
     "reason": "block_capacity",
     "block_id": "B15364",
-    "why": "Resolve block_capacity on B15364 vs 22848, 12879, 12811, 11043"
+    "why": "Resolve block_capacity on B15364 vs 12879, 12811, 11043, 22865"
   },
   {
     "train_id": "22865",
     "type": "HOLD",
     "at_station": "S4451",
-    "minutes": 5,
+    "minutes": 3,
     "reason": "headway",
     "block_id": "B15364",
     "why": "Resolve headway on B15364 vs 11043"
@@ -143,7 +175,15 @@
     "at_station": "S3486",
     "minutes": 3.0,
     "reason": "platform_overflow",
-    "why": "Reduce concurrent dwells at S3486"
+    "why": "Smooth arrival into S3486 by holding at S3486"
+  },
+  {
+    "train_id": "96651",
+    "type": "PLATFORM_REASSIGN",
+    "station_id": "S3486",
+    "platform": "any",
+    "reason": "spread_load",
+    "why": "Use alternate platform at S3486 if available"
   },
   {
     "train_id": "15068",
@@ -151,7 +191,15 @@
     "at_station": "S0654",
     "minutes": 3.0,
     "reason": "platform_overflow",
-    "why": "Reduce concurrent dwells at S0654"
+    "why": "Smooth arrival into S0654 by holding at S0654"
+  },
+  {
+    "train_id": "15068",
+    "type": "PLATFORM_REASSIGN",
+    "station_id": "S0654",
+    "platform": "any",
+    "reason": "spread_load",
+    "why": "Use alternate platform at S0654 if available"
   },
   {
     "train_id": "19601",
@@ -166,7 +214,7 @@
     "train_id": "19601",
     "type": "HOLD",
     "at_station": "S7732",
-    "minutes": 5,
+    "minutes": 3,
     "reason": "headway",
     "block_id": "B26822",
     "why": "Resolve headway on B26822 vs 12316"
@@ -184,7 +232,7 @@
     "train_id": "11093",
     "type": "HOLD",
     "at_station": "S1774",
-    "minutes": 5,
+    "minutes": 3,
     "reason": "headway",
     "block_id": "B6183",
     "why": "Resolve headway on B6183 vs 1011"
@@ -195,7 +243,15 @@
     "at_station": "S1176",
     "minutes": 3.0,
     "reason": "platform_overflow",
-    "why": "Reduce concurrent dwells at S1176"
+    "why": "Smooth arrival into S1176 by holding at S1176"
+  },
+  {
+    "train_id": "11025",
+    "type": "PLATFORM_REASSIGN",
+    "station_id": "S1176",
+    "platform": "any",
+    "reason": "spread_load",
+    "why": "Use alternate platform at S1176 if available"
   },
   {
     "train_id": "9433",
@@ -203,25 +259,33 @@
     "at_station": "S0654",
     "minutes": 3.0,
     "reason": "platform_overflow",
-    "why": "Reduce concurrent dwells at S0654"
+    "why": "Smooth arrival into S0654 by holding at S0654"
   },
   {
-    "train_id": "11093",
+    "train_id": "9433",
+    "type": "PLATFORM_REASSIGN",
+    "station_id": "S0654",
+    "platform": "any",
+    "reason": "spread_load",
+    "why": "Use alternate platform at S0654 if available"
+  },
+  {
+    "train_id": "11003",
     "type": "HOLD",
     "at_station": "S1792",
     "minutes": 2.0,
     "reason": "block_capacity",
     "block_id": "B6287",
-    "why": "Resolve block_capacity on B6287 vs 11003"
+    "why": "Resolve block_capacity on B6287 vs 11093"
   },
   {
-    "train_id": "11093",
+    "train_id": "11003",
     "type": "HOLD",
     "at_station": "S1792",
-    "minutes": 5,
+    "minutes": 3,
     "reason": "headway",
     "block_id": "B6287",
-    "why": "Resolve headway on B6287 vs 11003"
+    "why": "Resolve headway on B6287 vs 11093"
   },
   {
     "train_id": "98003",
@@ -236,7 +300,7 @@
     "train_id": "98003",
     "type": "HOLD",
     "at_station": "S1774",
-    "minutes": 5,
+    "minutes": 3,
     "reason": "headway",
     "block_id": "B6190",
     "why": "Resolve headway on B6190 vs 98001"
@@ -247,7 +311,15 @@
     "at_station": "S3486",
     "minutes": 3.0,
     "reason": "platform_overflow",
-    "why": "Reduce concurrent dwells at S3486"
+    "why": "Smooth arrival into S3486 by holding at S3486"
+  },
+  {
+    "train_id": "96227",
+    "type": "PLATFORM_REASSIGN",
+    "station_id": "S3486",
+    "platform": "any",
+    "reason": "spread_load",
+    "why": "Use alternate platform at S3486 if available"
   },
   {
     "train_id": "19808",
@@ -255,7 +327,15 @@
     "at_station": "S3075",
     "minutes": 3.0,
     "reason": "platform_overflow",
-    "why": "Reduce concurrent dwells at S3075"
+    "why": "Smooth arrival into S3075 by holding at S3075"
+  },
+  {
+    "train_id": "19808",
+    "type": "PLATFORM_REASSIGN",
+    "station_id": "S3075",
+    "platform": "any",
+    "reason": "spread_load",
+    "why": "Use alternate platform at S3075 if available"
   },
   {
     "train_id": "16616",
@@ -263,7 +343,15 @@
     "at_station": "S1766",
     "minutes": 3.0,
     "reason": "platform_overflow",
-    "why": "Reduce concurrent dwells at S1766"
+    "why": "Smooth arrival into S1766 by holding at S1766"
+  },
+  {
+    "train_id": "16616",
+    "type": "PLATFORM_REASSIGN",
+    "station_id": "S1766",
+    "platform": "any",
+    "reason": "spread_load",
+    "why": "Use alternate platform at S1766 if available"
   },
   {
     "train_id": "2515",
@@ -278,7 +366,7 @@
     "train_id": "2515",
     "type": "HOLD",
     "at_station": "S7690",
-    "minutes": 5,
+    "minutes": 3,
     "reason": "headway",
     "block_id": "B26689",
     "why": "Resolve headway on B26689 vs 22653"
@@ -289,22 +377,30 @@
     "at_station": "S3486",
     "minutes": 3.0,
     "reason": "platform_overflow",
-    "why": "Reduce concurrent dwells at S3486"
+    "why": "Smooth arrival into S3486 by holding at S3486"
   },
   {
-    "train_id": "98005",
+    "train_id": "96341",
+    "type": "PLATFORM_REASSIGN",
+    "station_id": "S3486",
+    "platform": "any",
+    "reason": "spread_load",
+    "why": "Use alternate platform at S3486 if available"
+  },
+  {
+    "train_id": "98003",
     "type": "HOLD",
     "at_station": "S1774",
     "minutes": 2.0,
     "reason": "block_capacity",
     "block_id": "B6190",
-    "why": "Resolve block_capacity on B6190 vs 98001, 98003"
+    "why": "Resolve block_capacity on B6190 vs 98001, 98005"
   },
   {
     "train_id": "98005",
     "type": "HOLD",
     "at_station": "S1774",
-    "minutes": 5,
+    "minutes": 3,
     "reason": "headway",
     "block_id": "B6190",
     "why": "Resolve headway on B6190 vs 98003"
@@ -315,7 +411,15 @@
     "at_station": "S0083",
     "minutes": 3.0,
     "reason": "platform_overflow",
-    "why": "Reduce concurrent dwells at S0083"
+    "why": "Smooth arrival into S0083 by holding at S0083"
+  },
+  {
+    "train_id": "69106",
+    "type": "PLATFORM_REASSIGN",
+    "station_id": "S0083",
+    "platform": "any",
+    "reason": "spread_load",
+    "why": "Use alternate platform at S0083 if available"
   },
   {
     "train_id": "96653",
@@ -323,7 +427,15 @@
     "at_station": "S3486",
     "minutes": 3.0,
     "reason": "platform_overflow",
-    "why": "Reduce concurrent dwells at S3486"
+    "why": "Smooth arrival into S3486 by holding at S3486"
+  },
+  {
+    "train_id": "96653",
+    "type": "PLATFORM_REASSIGN",
+    "station_id": "S3486",
+    "platform": "any",
+    "reason": "spread_load",
+    "why": "Use alternate platform at S3486 if available"
   },
   {
     "train_id": "96121",
@@ -331,7 +443,15 @@
     "at_station": "S3486",
     "minutes": 3.0,
     "reason": "platform_overflow",
-    "why": "Reduce concurrent dwells at S3486"
+    "why": "Smooth arrival into S3486 by holding at S3486"
+  },
+  {
+    "train_id": "96121",
+    "type": "PLATFORM_REASSIGN",
+    "station_id": "S3486",
+    "platform": "any",
+    "reason": "spread_load",
+    "why": "Use alternate platform at S3486 if available"
   },
   {
     "train_id": "96119",
@@ -339,7 +459,15 @@
     "at_station": "S3486",
     "minutes": 3.0,
     "reason": "platform_overflow",
-    "why": "Reduce concurrent dwells at S3486"
+    "why": "Smooth arrival into S3486 by holding at S3486"
+  },
+  {
+    "train_id": "96119",
+    "type": "PLATFORM_REASSIGN",
+    "station_id": "S3486",
+    "platform": "any",
+    "reason": "spread_load",
+    "why": "Use alternate platform at S3486 if available"
   },
   {
     "train_id": "22655",
@@ -354,9 +482,109 @@
     "train_id": "22655",
     "type": "HOLD",
     "at_station": "S7690",
-    "minutes": 5,
+    "minutes": 3,
     "reason": "headway",
     "block_id": "B26689",
     "why": "Resolve headway on B26689 vs 22653"
+  },
+  {
+    "train_id": "54810",
+    "type": "HOLD",
+    "at_station": "S3307",
+    "minutes": 3.0,
+    "reason": "platform_overflow",
+    "why": "Smooth arrival into S3307 by holding at S3307"
+  },
+  {
+    "train_id": "54810",
+    "type": "PLATFORM_REASSIGN",
+    "station_id": "S3307",
+    "platform": "any",
+    "reason": "spread_load",
+    "why": "Use alternate platform at S3307 if available"
+  },
+  {
+    "train_id": "22115",
+    "type": "HOLD",
+    "at_station": "S4451",
+    "minutes": 3.0,
+    "reason": "platform_overflow",
+    "why": "Smooth arrival into S4451 by holding at S4451"
+  },
+  {
+    "train_id": "22115",
+    "type": "PLATFORM_REASSIGN",
+    "station_id": "S4451",
+    "platform": "any",
+    "reason": "spread_load",
+    "why": "Use alternate platform at S4451 if available"
+  },
+  {
+    "train_id": "1045",
+    "type": "HOLD",
+    "at_station": "S4451",
+    "minutes": 2.0,
+    "reason": "block_capacity",
+    "block_id": "B15364",
+    "why": "Resolve block_capacity on B15364 vs 1037"
+  },
+  {
+    "train_id": "1045",
+    "type": "HOLD",
+    "at_station": "S4451",
+    "minutes": 3,
+    "reason": "headway",
+    "block_id": "B15364",
+    "why": "Resolve headway on B15364 vs 1037"
+  },
+  {
+    "train_id": "96655",
+    "type": "HOLD",
+    "at_station": "S3486",
+    "minutes": 3.0,
+    "reason": "platform_overflow",
+    "why": "Smooth arrival into S3486 by holding at S3486"
+  },
+  {
+    "train_id": "96655",
+    "type": "PLATFORM_REASSIGN",
+    "station_id": "S3486",
+    "platform": "any",
+    "reason": "spread_load",
+    "why": "Use alternate platform at S3486 if available"
+  },
+  {
+    "train_id": "1045",
+    "type": "HOLD",
+    "at_station": "S4451",
+    "minutes": 2.0,
+    "reason": "block_capacity",
+    "block_id": "B15364",
+    "why": "Resolve block_capacity on B15364 vs 1037, 22115"
+  },
+  {
+    "train_id": "22115",
+    "type": "HOLD",
+    "at_station": "S4451",
+    "minutes": 3,
+    "reason": "headway",
+    "block_id": "B15364",
+    "why": "Resolve headway on B15364 vs 1037"
+  },
+  {
+    "train_id": "12167",
+    "type": "HOLD",
+    "at_station": "S4451",
+    "minutes": 3.0,
+    "reason": "platform_overflow_upstream",
+    "why": "Smooth arrival into S3486 by holding at S4451"
+  },
+  {
+    "train_id": "12167",
+    "type": "PLATFORM_REASSIGN",
+    "station_id": "S3486",
+    "platform": "any",
+    "reason": "spread_load",
+    "why": "Use alternate platform at S3486 if available"
   }
 ]

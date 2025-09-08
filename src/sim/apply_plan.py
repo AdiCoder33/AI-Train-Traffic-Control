@@ -34,11 +34,15 @@ def apply_holds_to_events(df_events: pd.DataFrame, rec_plan: List[dict]) -> pd.D
     present, shift it; otherwise create act_dep = sched_dep + hold.
     """
     df = df_events.copy()
-    df["sched_dep"] = _to_utc(df.get("sched_dep")) if "sched_dep" in df.columns else pd.NaT
-    df["act_dep"] = _to_utc(df.get("act_dep")) if "act_dep" in df.columns else pd.NaT
+    df["sched_dep"] = _to_utc(df.get("sched_dep")) if "sched_dep" in df.columns else pd.Series(pd.NaT, dtype="datetime64[ns, UTC]", index=df.index)
+    # Ensure act_dep column exists and is tz-aware to avoid dtype warnings
+    if "act_dep" in df.columns:
+        df["act_dep"] = _to_utc(df["act_dep"]).astype("datetime64[ns, UTC]")
+    else:
+        df["act_dep"] = pd.Series(pd.NaT, dtype="datetime64[ns, UTC]", index=df.index)
 
     for a in rec_plan:
-        if a.get("type") != "HOLD":
+        if a.get("type") not in ("HOLD", "OVERTAKE"):
             continue
         tid = str(a.get("train_id"))
         sid = a.get("at_station")
@@ -74,13 +78,36 @@ def apply_and_validate(
     # Build graph
     graph = load_graph(nodes_df, edges_df)
 
-    # Run baseline risk on existing occupancy (caller should pass the baseline block occupancy if needed)
-    # Here we assume caller provides baseline occupancy externally; for convenience,
-    # we will compute risk on the applied occupancy and expect user to pass baseline counts.
+    # Run baseline replay for KPI baselines
+    sim_before = replay_run(events_df, graph)
 
     # Apply holds and replay
     df_applied = apply_holds_to_events(events_df, rec_plan)
-    sim_after = replay_run(df_applied, graph)
+    # Extract speed tuning from rec_plan
+    speed_map: Dict[tuple, float] = {}
+    for a in rec_plan:
+        if a.get("type") == "SPEED_TUNE":
+            tid = str(a.get("train_id"))
+            bid = str(a.get("block_id")) if a.get("block_id") is not None else None
+            fac = float(a.get("speed_factor", 1.0))
+            if bid:
+                speed_map[(tid, bid)] = fac
+    # Extract platform reassignment mapping from rec_plan
+    plat_override: Dict[tuple, int] = {}
+    for a in rec_plan:
+        if a.get("type") == "PLATFORM_REASSIGN":
+            tid = str(a.get("train_id"))
+            sid = a.get("station_id")
+            plat = a.get("platform")
+            if sid is None or plat in (None, "any"):
+                continue
+            try:
+                idx = int(plat)
+                plat_override[(tid, str(sid))] = idx
+            except Exception:
+                pass
+
+    sim_after = replay_run(df_applied, graph, per_train_speed=speed_map if speed_map else None, platform_override=plat_override if plat_override else None)
 
     # Analyze risks within horizon after application
     risks_after, _, _, _ = risk_analyze(
@@ -94,19 +121,83 @@ def apply_and_validate(
     )
     val_after = risk_validate(sim_after.block_occupancy, edges_df, risks_after)
 
-    # Aggregate wait minutes by reason in horizon (after)
+    # Analyze risks within horizon before application
+    risks_before, _, _, _ = risk_analyze(
+        edges_df,
+        nodes_df,
+        sim_before.block_occupancy,
+        platform_occ_df=sim_before.platform_occupancy,
+        waiting_df=sim_before.waiting_ledger,
+        t0=t0,
+        horizon_min=horizon_min,
+    )
+
+    # Aggregate wait minutes by reason in horizon (before/after)
     wait_after = 0.0
+    wait_before = 0.0
     if not sim_after.waiting_ledger.empty:
         wl = sim_after.waiting_ledger.copy()
         wl["start_time"] = _to_utc(wl.get("start_time"))
         wl = wl if t0 is None else wl[wl["start_time"] >= pd.to_datetime(t0, utc=True)]
         wl = wl[wl["start_time"] <= (pd.to_datetime(t0, utc=True) + pd.Timedelta(minutes=horizon_min))] if t0 else wl
         wait_after = float(pd.to_numeric(wl.get("minutes", 0.0), errors="coerce").fillna(0.0).sum())
+    if not sim_before.waiting_ledger.empty:
+        wl = sim_before.waiting_ledger.copy()
+        wl["start_time"] = _to_utc(wl.get("start_time"))
+        wl = wl if t0 is None else wl[wl["start_time"] >= pd.to_datetime(t0, utc=True)]
+        wl = wl[wl["start_time"] <= (pd.to_datetime(t0, utc=True) + pd.Timedelta(minutes=horizon_min))] if t0 else wl
+        wait_before = float(pd.to_numeric(wl.get("minutes", 0.0), errors="coerce").fillna(0.0).sum())
+
+    # KPI deltas (OTP/avg delay) at horizon exit
+    def _kpi_from_sim(sim) -> Dict[str, float]:
+        if sim.platform_occupancy.empty:
+            return {"otp_exit_pct": 0.0, "avg_exit_delay_min": 0.0}
+        last_dep = sim.platform_occupancy.sort_values(["train_id", "dep_platform"]).groupby("train_id").tail(1)
+        if t0 is not None:
+            t0_ts = pd.to_datetime(t0, utc=True)
+            t1_ts = t0_ts + pd.Timedelta(minutes=horizon_min)
+            last_dep = last_dep[(last_dep["dep_platform"] >= t0_ts) & (last_dep["dep_platform"] <= t1_ts)]
+        if last_dep.empty:
+            return {"otp_exit_pct": 0.0, "avg_exit_delay_min": 0.0}
+        # Scheduled arrival lookup for last station
+        dfu = events_df.drop_duplicates(subset=["train_id", "station_id"], keep="first").copy()
+        dfu["sched_arr"] = _to_utc(dfu.get("sched_arr"))
+        idx = pd.MultiIndex.from_arrays([last_dep["train_id"].values, last_dep["station_id"].values], names=["train_id", "station_id"])  # type: ignore
+        sched_map = dfu.set_index(["train_id", "station_id"])  # type: ignore
+        sched_arr = sched_map.reindex(idx)["sched_arr"] if "sched_arr" in sched_map.columns else None
+        if sched_arr is None:
+            return {"otp_exit_pct": 0.0, "avg_exit_delay_min": 0.0}
+        delay = (last_dep.set_index("train_id")["dep_platform"] - sched_arr).dt.total_seconds() / 60
+        return {
+            "otp_exit_pct": float((delay.le(5).mean() * 100.0) if len(delay) else 0.0),
+            "avg_exit_delay_min": float(delay.mean(skipna=True) if len(delay) else 0.0),
+        }
+
+    kpi_before = _kpi_from_sim(sim_before)
+    kpi_after = _kpi_from_sim(sim_after)
+
+    # Risk breakdowns by type
+    def _breakdown(rs: List[dict]) -> Dict[str, int]:
+        out: Dict[str, int] = {}
+        for r in rs:
+            t = str(r.get("type"))
+            out[t] = out.get(t, 0) + 1
+        return out
+    breakdown_before = _breakdown(risks_before)
+    breakdown_after = _breakdown(risks_after)
 
     return {
         "applied_risks": int(len(risks_after)),
+        "baseline_risks": int(len(risks_before)),
+        "risk_reduction": int(len(risks_before)) - int(len(risks_after)),
+        "risk_reduction_headway_block": int(breakdown_before.get("headway", 0) + breakdown_before.get("block_capacity", 0)) - int(breakdown_after.get("headway", 0) + breakdown_after.get("block_capacity", 0)),
+        "risk_breakdown_before": breakdown_before,
+        "risk_breakdown_after": breakdown_after,
         "validation_after": val_after,
+        "wait_minutes_before": wait_before,
         "wait_minutes_after": wait_after,
+        "kpi_before": kpi_before,
+        "kpi_after": kpi_after,
     }
 
 
@@ -116,4 +207,3 @@ def save(out_dir: str | Path, result: Dict[str, object], *, applied_block: Optio
     (out / "plan_apply_report.json").write_text(json.dumps(result, indent=2))
     if applied_block is not None:
         applied_block.to_parquet(out / "applied_block_occupancy.parquet", index=False)
-
