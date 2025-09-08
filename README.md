@@ -249,3 +249,8 @@ Outputs (artifacts):
 - `risk_timeline.parquet` — risks per resource/time bucket
 - `mitigation_preview.json` — simple holds (2/5 min) and whether they resolve
 - `risk_kpis.json` — totals, severity breakdown, avg lead time, % with preview
+ - `risk_validation.json` — checks: post-enforcement no overlaps; headway respected; min lead for Critical
+
+Notes:
+- Platform risks fall back to derived dwell windows if a waiting ledger or explicit platform occupancy is unavailable.
+- Mitigation previews include ETA deltas for 2/5 min holds (lightweight propagation along the affected train only).
