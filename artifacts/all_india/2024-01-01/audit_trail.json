@@ -1,0 +1,19 @@
+[
+  {
+    "ts": "2025-09-09T13:25:16.212350+00:00",
+    "who": "controller01",
+    "role": "SC",
+    "action_id": "d9f56a1fe2e04ff9759a8b9f102ae35ad61a76ef",
+    "decision": "ACK",
+    "details": {},
+    "plan_version": "9704f4e2e41d734923c02263e60e121b39cf71ef",
+    "action": {
+      "train_id": "64076",
+      "type": "HOLD",
+      "at_station": "S5496",
+      "minutes": 3.0,
+      "reason": "platform_overflow",
+      "why": "Smooth arrival into S5496 by holding at S5496"
+    }
+  }
+]
