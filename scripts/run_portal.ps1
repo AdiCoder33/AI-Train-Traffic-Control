@@ -1,6 +1,7 @@
 param(
   [Parameter(Position=0, Mandatory=$false)][string]$ApiHost = '127.0.0.1',
-  [Parameter(Position=1, Mandatory=$false)][int]$ApiPort = 8000
+  [Parameter(Position=1, Mandatory=$false)][int]$ApiPort = 8000,
+  [Parameter(Position=2, Mandatory=$false)][int]$UiPort = 8501
 )
 
 $ErrorActionPreference = 'Stop'
@@ -18,9 +19,9 @@ Start-Process -NoNewWindow -FilePath $Py -ArgumentList "-m","uvicorn","src.api.s
 $env:STREAMLIT_SERVER_HEADLESS = "true"
 $env:STREAMLIT_BROWSER_GATHER_USAGE_STATS = "false"
 $env:STREAMLIT_SERVER_ADDRESS = $ApiHost
-$env:STREAMLIT_SERVER_PORT = "8501"
+$env:STREAMLIT_SERVER_PORT = "$UiPort"
 
 # Use python -m streamlit for portability
-Start-Process -NoNewWindow -FilePath $Py -ArgumentList "-m","streamlit","run","src/ui/app.py","--server.headless","true","--server.address",$ApiHost,"--server.port","8501","--browser.gatherUsageStats","false"
+Start-Process -NoNewWindow -FilePath $Py -ArgumentList "-m","streamlit","run","src/ui/app.py","--server.headless","true","--server.address",$ApiHost,"--server.port",$UiPort,"--browser.gatherUsageStats","false"
 
-Write-Host ("[PORTAL] API on http://{0}:{1}, UI on Streamlit default port" -f $ApiHost, $ApiPort)
+Write-Host ("[PORTAL] API on http://{0}:{1}, UI on http://{0}:{2}" -f $ApiHost, $ApiPort, $UiPort)
