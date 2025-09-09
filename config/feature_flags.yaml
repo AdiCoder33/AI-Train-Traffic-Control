@@ -1,0 +1,14 @@
+# Feature flags (Phase 6 prototype)
+
+adapters:
+  polling_running_status: false
+  gtfs_rt: false
+  file_drop: true
+
+optimizer:
+  hysteresis: true
+  warm_start: false
+
+portal:
+  sandbox_watermark: true
+

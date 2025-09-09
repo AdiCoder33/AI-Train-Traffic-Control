@@ -8,7 +8,7 @@ import json
 from datetime import datetime, timezone
 
 import pandas as pd
-from fastapi import Depends, FastAPI, HTTPException, Header
+from fastapi import Depends, FastAPI, HTTPException, Header, Response
 from pydantic import BaseModel
 
 app = FastAPI(title="Train Control Decision Support API")
@@ -93,6 +93,14 @@ def get_state(scope: str, date: str, principal: Principal = Depends(get_principa
         "sim_kpis": kpis,
         "whoami": principal.dict(),
     }
+
+
+@app.get("/snapshot")
+def get_snapshot(scope: str, date: str) -> Dict[str, Any]:
+    global ENGINE
+    if ENGINE is None:
+        return {"snapshot": []}
+    return {"snapshot": ENGINE.snapshot()}
 
 
 @app.get("/radar")
@@ -232,6 +240,23 @@ def post_feedback(fb: Feedback, principal: Principal = Depends(get_principal)) -
     return {"status": "ok", "plan_version": plan_version, "action_id": action.get("action_id")}
 
 
+class ApplyReq(BaseModel):
+    scope: str
+    date: str
+    action_id: str
+    modifiers: Optional[Dict[str, Any]] = None
+
+
+@app.post("/apply")
+def post_apply(body: ApplyReq, principal: Principal = Depends(get_principal)) -> Dict[str, Any]:
+    require_roles(principal, ("SC", "ADM"))
+    global ENGINE
+    if ENGINE is None:
+        return {"status": "engine_not_running"}
+    res = ENGINE.apply_action(body.action_id, body.modifiers)
+    return res
+
+
 # ---------- Auth: login & admin ----------
 class LoginReq(BaseModel):
     username: str
@@ -311,6 +336,26 @@ def audit_trail(scope: str, date: str, principal: Principal = Depends(get_princi
     return {"audit_trail": trail}
 
 
+@app.get("/audit")
+def audit_range(scope: str, date: str, start_ts: Optional[str] = None, end_ts: Optional[str] = None) -> Dict[str, Any]:
+    base = _art_dir(scope, date)
+    trail = _read_json(base / "audit_trail.json") or []
+    if start_ts or end_ts:
+        from pandas import to_datetime
+        s = to_datetime(start_ts) if start_ts else None
+        e = to_datetime(end_ts) if end_ts else None
+        out = []
+        for x in trail:
+            try:
+                ts = to_datetime(x.get("ts"))
+                if (s is None or ts >= s) and (e is None or ts <= e):
+                    out.append(x)
+            except Exception:
+                continue
+        trail = out
+    return {"audit": trail}
+
+
 @app.get("/audit/completeness")
 def audit_completeness(scope: str, date: str) -> Dict[str, Any]:
     base = _art_dir(scope, date)
@@ -338,6 +383,12 @@ def get_policy(scope: str, date: str) -> Dict[str, Any]:
     meta = _read_json(base / "provenance.json") or {}
     return {"policy_state": pol, "provenance": meta}
 
+# Runtime engine singleton
+try:
+    from src.runtime.engine import RuntimeEngine, EngineConfig
+    ENGINE: Optional[RuntimeEngine] = None
+except Exception:
+    ENGINE = None
 
 @app.put("/policy")
 def set_policy(scope: str, date: str, policy: Policy, principal: Principal = Depends(get_principal)) -> Dict[str, Any]:
@@ -383,3 +434,38 @@ def _crew_summary(rec: Dict[str, Any]) -> str:
     if t == "SPEED_TUNE":
         return f"Block {rec.get('block_id')}: speed x{rec.get('speed_factor')}"
     return str(rec)
+
+
+# Metrics and health
+@app.get("/metrics")
+def get_metrics() -> Response:
+    try:
+        from src.ops.metrics import text_metrics
+        data, ctype = text_metrics()
+        return Response(content=data, media_type=ctype)
+    except Exception:
+        return Response(content=b"", media_type="text/plain")
+
+
+@app.get("/healthz")
+def healthz() -> Dict[str, Any]:
+    return {"status": "ok"}
+
+
+@app.get("/readiness")
+def readiness() -> Dict[str, Any]:
+    global ENGINE
+    return {"ready": ENGINE is not None}
+
+
+@app.on_event("startup")
+def on_startup() -> None:
+    # Start runtime engine in sandbox mode by default
+    global ENGINE
+    try:
+        if ENGINE is None:
+            cfg = EngineConfig()
+            ENGINE = RuntimeEngine(cfg)
+            ENGINE.start()
+    except Exception:
+        pass
