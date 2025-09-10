@@ -39,6 +39,145 @@ def sha1_dict(obj: Any) -> str:
     return hashlib.sha1(s.encode("utf-8")).hexdigest()
 
 
+# ---- UI helpers (modernized rendering) ----
+def _df_from(records: List[Dict[str, Any]] | Dict[str, Any], columns: List[str] | None = None) -> pd.DataFrame:
+    if isinstance(records, dict):
+        try:
+            return pd.json_normalize(records)
+        except Exception:
+            return pd.DataFrame([records])
+    try:
+        df = pd.DataFrame(records)
+    except Exception:
+        return pd.DataFrame()
+    if columns:
+        cols = [c for c in columns if c in df.columns]
+        if cols:
+            df = df[cols]
+    return df
+
+
+def _render_kv_table(d: Dict[str, Any]) -> None:
+    try:
+        df = pd.DataFrame({"key": list(d.keys()), "value": [d[k] for k in d.keys()]})
+        st.dataframe(df, hide_index=True, use_container_width=True)
+    except Exception:
+        st.write(d)
+
+
+# ---- Badges / chips (emoji-based, table-friendly) ----
+def _sev_badge(sev: str | None) -> str:
+    s = (sev or "").strip().title()
+    return {
+        "Critical": "🔴 Critical",
+        "High": "🟠 High",
+        "Medium": "🟡 Medium",
+        "Low": "🟢 Low",
+    }.get(s, s)
+
+
+def _type_badge(t: str | None) -> str:
+    x = (t or "").strip()
+    return {
+        "headway": "⏱ headway",
+        "block_capacity": "🚦 capacity",
+        "platform_overflow": "🛤 platform",
+    }.get(x, x)
+
+
+def _action_badge(t: str | None) -> str:
+    x = (t or "").strip().upper()
+    return {
+        "HOLD": "⏱ HOLD",
+        "PLATFORM_REASSIGN": "🛤 PLATFORM",
+        "SPEED_TUNE": "⚡ SPEED",
+        "OVERTAKE": "🔁 OVERTAKE",
+        "SKIP_STOP": "⛔ SKIP",
+    }.get(x, x)
+
+
+# ---- Styling helpers ----
+def _style_hide_index(styler: Any) -> Any:
+    try:
+        return styler.hide(axis="index")  # pandas >= 1.4
+    except Exception:
+        try:
+            return styler.hide_index()  # older pandas
+        except Exception:
+            return styler
+
+
+def _style_risks(df: pd.DataFrame, sev_col: str = "Severity") -> Any:
+    """Return a pandas Styler with row background by severity labels.
+
+    Expects values like '🔴 Critical', '🟠 High', '🟡 Medium', '🟢 Low'.
+    """
+    def _row_style(row: pd.Series) -> list[str]:
+        s = str(row.get(sev_col, "")).lower()
+        if "critical" in s:
+            color = "#ffe5e5"  # light red
+        elif "high" in s:
+            color = "#fff0e0"  # light orange
+        elif "medium" in s:
+            color = "#fff8e1"  # light yellow
+        elif "low" in s:
+            color = "#eaffea"  # light green
+        else:
+            color = "#ffffff"
+        return [f"background-color: {color}"] * len(row)
+
+    try:
+        sty = df.style.apply(_row_style, axis=1)
+        return _style_hide_index(sty)
+    except Exception:
+        return df
+
+
+def _style_minutes(df: pd.DataFrame, col: str = "Minutes") -> Any:
+    """Color minutes column with gentle thresholds (<=2 green, <=3 yellow, else orange/red)."""
+    if col not in df.columns:
+        return df
+    def _cell(v: Any) -> str:
+        try:
+            x = float(v)
+        except Exception:
+            return ""
+        if x <= 2.0:
+            return "background-color: #eaffea"  # light green
+        if x <= 3.0:
+            return "background-color: #fff8e1"  # light yellow
+        if x <= 4.0:
+            return "background-color: #fff0e0"  # light orange
+        return "background-color: #ffe5e5"      # light red
+    try:
+        sty = df.style.applymap(_cell, subset=[col])
+        return _style_hide_index(sty)
+    except Exception:
+        return df
+
+
+def _style_audit(df: pd.DataFrame, col: str = "Decision") -> Any:
+    """Color decision column (APPLY green, DISMISS red, MODIFY blue, ACK gray)."""
+    if col not in df.columns:
+        return df
+    def _cell(v: Any) -> str:
+        s = str(v).upper()
+        if s == "APPLY":
+            return "background-color: #eaffea"
+        if s == "DISMISS":
+            return "background-color: #ffe5e5"
+        if s == "MODIFY":
+            return "background-color: #e6f0ff"
+        if s == "ACK":
+            return "background-color: #f2f2f2"
+        return ""
+    try:
+        sty = df.style.applymap(_cell, subset=[col])
+        return _style_hide_index(sty)
+    except Exception:
+        return df
+
+
 def _crew_summary(rec: Dict[str, Any]) -> str:
     t = rec.get("type")
     if t == "HOLD":
@@ -128,6 +267,17 @@ def log_feedback(
 
 st.set_page_config(page_title="Train Control Portal", layout="wide")
 st.title("Decision Support Portal")
+
+# Minimal CSS polish for compact tables/metrics
+st.markdown(
+    """
+    <style>
+    .stMetric { gap: 0.25rem; }
+    .stDataFrame table { font-size: 0.9rem; }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
 
 # Safe rerun helper for different Streamlit versions
 def _safe_rerun() -> None:
@@ -240,18 +390,63 @@ rec_plan: List[dict] = read_json(base / "rec_plan.json") or []
 alts: List[dict] = read_json(base / "alt_options.json") or []
 plan_version = sha1_dict(rec_plan) if rec_plan else ""
 
-tab_names = ["Overview", "Board", "Radar", "Recommendations", "Audit", "Policy", "Crew", "Lab", "Admin"]
-t_over, t_board, t_radar, t_reco, t_audit, t_policy, t_crew, t_lab, t_admin = st.tabs(tab_names)
+# Station scoping for Station Controller role
+sc_station: str | None = None
+if role == "SC":
+    try:
+        nodes_all = load_parquet(base / "section_nodes.parquet")
+        opts_ids = nodes_all["station_id"].dropna().astype(str).unique().tolist() if not nodes_all.empty and "station_id" in nodes_all.columns else sorted(set((df_plat.get("station_id").dropna().astype(str).tolist() if not df_plat.empty else [])))
+    except Exception:
+        opts_ids = []
+    if opts_ids:
+        labels = [label_station(x) for x in sorted(opts_ids)]
+        sel = st.sidebar.selectbox("Your Station (SC)", labels)
+        # map back to id
+        idx = labels.index(sel)
+        sc_station = sorted(opts_ids)[idx]
+
+# Apply station scoping to views
+df_plat_view = df_plat.copy()
+df_block_view = df_block.copy()
+radar_view = list(radar)
+rec_plan_view = list(rec_plan)
+if role == "SC" and sc_station:
+    sid = str(sc_station)
+    if not df_plat_view.empty and "station_id" in df_plat_view.columns:
+        df_plat_view = df_plat_view[df_plat_view["station_id"].astype(str) == sid]
+    if not df_block_view.empty and {"u","v"}.issubset(df_block_view.columns):
+        df_block_view = df_block_view[(df_block_view["u"].astype(str) == sid) | (df_block_view["v"].astype(str) == sid)]
+    # radar filter
+    radar_view = [r for r in radar_view if str(r.get("station_id","")) == sid or str(r.get("u","")) == sid or str(r.get("v","")) == sid]
+    # rec_plan filter: match station or at_station or blocks touching
+    blocks_touching = set()
+    try:
+        if not df_block.empty:
+            sub = df_block[(df_block["u"].astype(str) == sid) | (df_block["v"].astype(str) == sid)]
+            blocks_touching = set(sub["block_id"].astype(str).unique().tolist())
+    except Exception:
+        pass
+    tmp = []
+    for r in rec_plan_view:
+        st1 = r.get("station_id")
+        at = r.get("at_station")
+        bid = r.get("block_id")
+        if (st1 is not None and str(st1) == sid) or (at is not None and str(at) == sid) or (bid is not None and str(bid) in blocks_touching):
+            tmp.append(r)
+    rec_plan_view = tmp
+
+tab_names = ["Overview", "Board", "Radar", "Recommendations", "Audit", "Policy", "Crew", "Assistant", "Lab", "Admin"]
+t_over, t_board, t_radar, t_reco, t_audit, t_policy, t_crew, t_asst, t_lab, t_admin = st.tabs(tab_names)
 
 # Sticky banners for critical/high risks
-if radar:
-    sev_counts: Dict[str, int] = {}
-    for r in radar:
-        sev_counts[r.get("severity", "")] = sev_counts.get(r.get("severity", ""), 0) + 1
-    if sev_counts.get("Critical"):
-        st.error(f"Critical risks in horizon: {sev_counts['Critical']}")
-    if sev_counts.get("High"):
-        st.warning(f"High risks in horizon: {sev_counts['High']}")
+    if radar_view:
+        sev_counts: Dict[str, int] = {}
+        for r in radar_view:
+            sev_counts[r.get("severity", "")] = sev_counts.get(r.get("severity", ""), 0) + 1
+        if sev_counts.get("Critical"):
+            st.error(f"Critical risks in horizon: {sev_counts['Critical']}")
+        if sev_counts.get("High"):
+            st.warning(f"High risks in horizon: {sev_counts['High']}")
 
 with t_over:
     st.subheader("KPIs & Summary")
@@ -267,9 +462,9 @@ with t_over:
 
     # Severity distribution
     st.caption("Risk severity mix")
-    if radar:
+    if radar_view:
         sev_counts: Dict[str, int] = {}
-        for r in radar:
+        for r in radar_view:
             sev_counts[r.get("severity", "Unknown")] = sev_counts.get(r.get("severity", "Unknown"), 0) + 1
         df_sev = pd.DataFrame({"severity": list(sev_counts.keys()), "count": list(sev_counts.values())})
         chart = alt.Chart(df_sev).mark_bar().encode(x="severity:N", y="count:Q", color="severity:N")
@@ -285,19 +480,20 @@ with t_board:
     tb_plat, tb_block, tb_heat = st.tabs(["Platforms", "Blocks", "Platform Heatmap"])
 
     with tb_plat:
-        if df_plat.empty:
+        if df_plat_view.empty:
             st.info("No platform occupancy available.")
         else:
-            dfp = df_plat.copy().sort_values("arr_platform").head(2000)
+            dfp = df_plat_view.copy().sort_values("arr_platform").head(2000)
             dfp["arr_platform"] = pd.to_datetime(dfp["arr_platform"])  # type: ignore
             dfp["dep_platform"] = pd.to_datetime(dfp["dep_platform"])  # type: ignore
             # Plotly Gantt timeline
             try:
+                dfp["station_label"] = dfp["station_id"].map(lambda x: label_station(x))
                 fig = px.timeline(
                     dfp,
                     x_start="arr_platform",
                     x_end="dep_platform",
-                    y="station_id",
+                    y="station_label",
                     color="train_id",
                     hover_data=["train_id", "station_id", "arr_platform", "dep_platform"],
                 )
@@ -320,10 +516,10 @@ with t_board:
                 pass
 
     with tb_block:
-        if df_block.empty:
+        if df_block_view.empty:
             st.info("No block occupancy available.")
         else:
-            dfb = df_block.copy().sort_values("entry_time").head(3000)
+            dfb = df_block_view.copy().sort_values("entry_time").head(3000)
             dfb["entry_time"] = pd.to_datetime(dfb["entry_time"])  # type: ignore
             dfb["exit_time"] = pd.to_datetime(dfb["exit_time"])  # type: ignore
             try:
@@ -422,25 +618,32 @@ with t_radar:
         except Exception:
             pass
         st.caption("Top risks")
-        df_radar = pd.DataFrame(radar)
+        df_radar = pd.DataFrame(radar_view)
         cols = [c for c in ["severity", "type", "block_id", "station_id", "time_window", "train_ids"] if c in df_radar.columns]
         if not df_radar.empty and cols:
-            st.dataframe(df_radar[cols].head(100))
+            dfv = df_radar[cols].head(100).copy()
+            if "severity" in dfv.columns:
+                dfv["severity"] = dfv["severity"].map(_sev_badge)
+            if "type" in dfv.columns:
+                dfv["type"] = dfv["type"].map(_type_badge)
+            dfv = dfv.rename(columns={"severity": "Severity", "type": "Type", "block_id": "Block", "station_id": "Station", "time_window": "Window"})
+            styled = _style_risks(dfv, sev_col="Severity")
+            st.dataframe(styled, use_container_width=True)
 
 with t_reco:
     st.subheader("Recommendations Panel")
     if role in ("CREW",):
         st.info("Recommendation controls are not available for Crew role.")
-    elif not rec_plan:
+    elif not rec_plan_view:
         st.info("No recommendations found.")
     else:
         st.caption(f"Plan version: {plan_version}")
         # Summary by type chart
-        df_types = pd.DataFrame(rec_plan)
+        df_types = pd.DataFrame(rec_plan_view)
         if not df_types.empty and "type" in df_types.columns:
             agg = df_types.groupby("type").size().reset_index(name="count")
             st.altair_chart(alt.Chart(agg).mark_bar().encode(x="type:N", y="count:Q", color="type:N"), use_container_width=True)
-        for i, rec in enumerate(rec_plan[:100]):
+        for i, rec in enumerate(rec_plan_view[:100]):
             aid = rec.get("action_id") or sha1_dict(rec)
             title = f"#{i+1} {rec.get('type')} for train {rec.get('train_id')} at {rec.get('at_station') or rec.get('station_id')}"
             with st.expander(title):
@@ -449,7 +652,19 @@ with t_reco:
                 # show tradeoffs if available
                 if alts:
                     st.caption("Trade-offs available")
-                st.json(rec)
+                rec_view = dict(rec)
+                rec_view["type"] = _action_badge(str(rec_view.get("type")))
+                df_one = _df_from(rec_view, columns=["train_id","type","at_station","station_id","block_id","minutes","reason","why"]) 
+                # add name labels
+                if "station_id" in df_one.columns:
+                    df_one["Station"] = df_one["station_id"].map(label_station)
+                if "at_station" in df_one.columns:
+                    df_one["At"] = df_one["at_station"].map(label_station)
+                if "train_id" in df_one.columns:
+                    df_one["Train"] = df_one["train_id"].map(label_train)
+                df_one = df_one.rename(columns={"type":"Action","block_id":"Block","minutes":"Minutes","reason":"Reason","why":"Why"})
+                df_one = df_one[[c for c in ["Train","Action","At","Station","Block","Minutes","Reason","Why"] if c in df_one.columns]]
+                st.dataframe(_style_minutes(df_one, col="Minutes"), use_container_width=True)
                 c1, c2, c3, c4 = st.columns(4)
                 with c1:
                     if role in ("SC", "ADM") and st.button("APPLY", key=f"apply_{i}"):
@@ -491,7 +706,9 @@ with t_audit:
         completeness = acted / len(rec_plan) * 100.0
     st.metric("Feedback completeness (%)", f"{completeness:.1f}")
     if trail:
-        st.json(trail[-50:])
+        df_trail = _df_from(trail[-50:], ["ts","user","role","decision","plan_version","action_id"])  # type: ignore
+        df_trail = df_trail.rename(columns={"ts":"Time","user":"User","role":"Role","decision":"Decision","plan_version":"Plan","action_id":"Action"})
+        st.dataframe(_style_audit(df_trail, col="Decision"), use_container_width=True)
 
 with t_policy:
     st.subheader("Policy Console (OM/DH)")
@@ -532,6 +749,99 @@ with t_policy:
                 st.success("Policy saved locally (no auth)")
 
         st.divider()
+        st.subheader("Model Training (Admin/OM/DH)")
+        cta1, cta2 = st.columns(2)
+        with cta1:
+            if st.button("Train Global IL Model"):
+                try:
+                    resp = requests.post(
+                        f"http://{api_host}:{api_port}/admin/train_global",
+                        headers={"Authorization": f"Bearer {st.session_state['token']}"} if st.session_state.get("token") else {},
+                        timeout=30,
+                    )
+                    if resp.status_code == 200:
+                        st.success("Global model trained")
+                        st.dataframe(_df_from(resp.json()), hide_index=True, use_container_width=True)
+                    else:
+                        st.error(f"Train failed: {resp.text}")
+                except Exception as e:
+                    st.error(f"API error: {e}")
+        with cta2:
+            alpha = st.slider("RL penalty alpha", 0.0, 1.0, 0.2, 0.05, key="rl_alpha")
+            if st.button("Build Offline RL Dataset"):
+                try:
+                    resp = requests.post(
+                        f"http://{api_host}:{api_port}/admin/build_offline_rl",
+                        params={"alpha": float(alpha)},
+                        headers={"Authorization": f"Bearer {st.session_state['token']}"} if st.session_state.get("token") else {},
+                        timeout=60,
+                    )
+                    if resp.status_code == 200:
+                        st.success("Offline RL dataset built")
+                        st.dataframe(_df_from(resp.json()), hide_index=True, use_container_width=True)
+                    else:
+                        st.error(f"Build failed: {resp.text}")
+                except Exception as e:
+                    st.error(f"API error: {e}")
+        st.markdown("")
+        cta3 = st.columns(1)[0]
+        with cta3:
+            if st.button("Train Offline RL Policy"):
+                try:
+                    resp = requests.post(
+                        f"http://{api_host}:{api_port}/admin/train_offrl",
+                        headers={"Authorization": f"Bearer {st.session_state['token']}"} if st.session_state.get("token") else {},
+                        timeout=30,
+                    )
+                    if resp.status_code == 200:
+                        st.success("Offline RL policy trained")
+                        st.dataframe(_df_from(resp.json()), hide_index=True, use_container_width=True)
+                    else:
+                        st.error(f"Train failed: {resp.text}")
+                except Exception as e:
+                    st.error(f"API error: {e}")
+        cta5 = st.columns(1)[0]
+        with cta5:
+            if st.button("Train Torch IL Model"):
+                try:
+                    resp = requests.post(
+                        f"http://{api_host}:{api_port}/admin/train_il_torch",
+                        headers={"Authorization": f"Bearer {st.session_state['token']}"} if st.session_state.get("token") else {},
+                        timeout=60,
+                    )
+                    if resp.status_code == 200:
+                        st.success("Torch IL model trained")
+                        st.json(resp.json())
+                    else:
+                        st.error(f"Train failed: {resp.text}")
+                except Exception as e:
+                    st.error(f"API error: {e}")
+        st.markdown("")
+        cta4 = st.columns(1)[0]
+        with cta4:
+            if st.button("Run Offline Evaluation"):
+                try:
+                    resp = requests.get(
+                        f"http://{api_host}:{api_port}/admin/eval_offline",
+                        headers={"Authorization": f"Bearer {st.session_state['token']}"} if st.session_state.get("token") else {},
+                        timeout=30,
+                    )
+                    if resp.status_code == 200:
+                        payload = resp.json()
+                        res = payload.get("result", {}) if isinstance(payload, dict) else {}
+                        st.success("Offline evaluation complete")
+                        # Render leaderboard if available
+                        lb = res.get("leaderboard", []) if isinstance(res, dict) else []
+                        if lb:
+                            st.caption("Leaderboard (by mean_q)")
+                            st.dataframe(_df_from(lb), hide_index=True, use_container_width=True)
+                        # Render summary
+                        st.dataframe(_df_from({k: res.get(k) for k in ("status","n","models")} ), hide_index=True, use_container_width=True)
+                    else:
+                        st.error(f"Eval failed: {resp.text}")
+                except Exception as e:
+                    st.error(f"API error: {e}")
+        st.divider()
         st.subheader("Recompute plan (what-if)")
         hr = st.number_input("Horizon (min)", min_value=15, max_value=240, value=60, key="policy_horizon")
         mh = st.number_input("Max hold per action (min)", min_value=1, max_value=10, value=3, key="policy_max_hold")
@@ -545,9 +855,27 @@ with t_policy:
                 risks = read_json(base / "conflict_radar.json") or []
                 prio_map = (json.loads(weights) if weights else {}) if isinstance(weights, str) else {}
                 rec, alt, metrics, audit = propose(edges, nodes, block, risks, horizon_min=int(hr), priorities=prio_map, max_hold_min=int(mh), max_holds_per_train=int(mhpt))
-                st.json({"metrics": metrics, "audit": audit})
-                st.write("Preview actions (first 20):")
-                st.json(rec[:20])
+                mcols = st.columns(3)
+                mcols[0].metric("Actions", f"{int(metrics.get('actions',0))}")
+                mcols[1].metric("Conflicts targeted", f"{int(metrics.get('conflicts_targeted',0))}")
+                mcols[2].metric("Expected reduction", f"{int(metrics.get('expected_conflict_reduction',0))}")
+                st.caption("Preview actions (first 20)")
+                # Badge action type
+                preview = []
+                for r in rec[:20]:
+                    x = dict(r)
+                    x["type"] = _action_badge(str(x.get("type")))
+                    preview.append(x)
+                df_prev = _df_from(preview, columns=["train_id","type","at_station","station_id","block_id","minutes","reason"]) 
+                if "station_id" in df_prev.columns:
+                    df_prev["Station"] = df_prev["station_id"].map(label_station)
+                if "at_station" in df_prev.columns:
+                    df_prev["At"] = df_prev["at_station"].map(label_station)
+                if "train_id" in df_prev.columns:
+                    df_prev["Train"] = df_prev["train_id"].map(label_train)
+                df_prev = df_prev.rename(columns={"type":"Action","block_id":"Block","minutes":"Minutes","reason":"Reason"})
+                df_prev = df_prev[[c for c in ["Train","Action","At","Station","Block","Minutes","Reason"] if c in df_prev.columns]]
+                st.dataframe(_style_minutes(df_prev, col="Minutes"), use_container_width=True)
             except Exception as e:
                 st.error(f"Failed to recompute: {e}")
 
@@ -564,7 +892,8 @@ with t_crew:
             nxt = dfc[(dfc["train_id"].astype(str) == str(my_train)) & (dfc["dep_platform"] >= now)].sort_values("arr_platform").head(2)
             if not nxt.empty:
                 st.caption("Next stations (ETA / ETD)")
-                st.dataframe(nxt[["station_id", "arr_platform", "dep_platform"]])
+                nxt = nxt.assign(Station=nxt["station_id"].map(lambda x: label_station(x)))
+                st.dataframe(nxt[["Station", "arr_platform", "dep_platform"]], hide_index=True, use_container_width=True)
     except Exception:
         pass
     if not rec_plan:
@@ -581,6 +910,76 @@ with t_crew:
                     log_feedback(scope, date, rec, "ACK", user=user, role=role, plan_version=plan_version, action_id=aid, api_host=api_host, api_port=api_port)
                     st.success("Acknowledged")
 
+with t_asst:
+    st.subheader("Assistant – Ask & Suggest")
+    with st.expander("Ask a question", expanded=True):
+        q = st.text_input("Question", value="What are today’s risks and OTP?", key="asst_q")
+        train_q = st.text_input("Train ID (optional)", value="", key="asst_train_q")
+        if st.button("Ask", key="asst_btn_ask"):
+            try:
+                payload = {"scope": scope, "date": date, "query": q, "train_id": (train_q or None)}
+                if role == "SC" and sc_station:
+                    payload["station_id"] = sc_station
+                headers = {"Authorization": f"Bearer {st.session_state['token']}"} if st.session_state.get("token") else {}
+                resp = requests.post(f"http://{api_host}:{api_port}/ai/ask", json=payload, headers=headers, timeout=8)
+                if resp.status_code == 200:
+                    data = resp.json().get("result", {})
+                    st.write(data.get("answer", ""))
+                    details = data.get("details")
+                    if isinstance(details, list) and details and isinstance(details[0], dict):
+                        st.dataframe(_df_from(details), hide_index=True, use_container_width=True)
+                    elif isinstance(details, list) and details and isinstance(details[0], str):
+                        for item in details:
+                            st.write(f"• {item}")
+                    elif isinstance(details, dict):
+                        _render_kv_table(details)
+                else:
+                    st.error(f"Ask failed: {resp.text}")
+            except Exception as e:
+                st.error(f"Ask error: {e}")
+
+    with st.expander("Get suggestions", expanded=True):
+        train_s = st.text_input("Train ID (optional; required for CREW)", value="", key="asst_train_s")
+        max_hold = st.slider("Max hold (min)", 1, 5, 3, key="asst_max_hold")
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("Suggest", key="asst_btn_suggest"):
+                try:
+                    payload = {"scope": scope, "date": date, "train_id": (train_s or None), "max_hold_min": int(max_hold)}
+                    if role == "SC" and sc_station:
+                        payload["station_id"] = sc_station
+                    headers = {"Authorization": f"Bearer {st.session_state['token']}"} if st.session_state.get("token") else {}
+                    resp = requests.post(f"http://{api_host}:{api_port}/ai/suggest", json=payload, headers=headers, timeout=12)
+                    if resp.status_code == 200:
+                        data = resp.json().get("result", {})
+                        src = data.get("source")
+                        st.caption(f"Source: {src}")
+                        sugg = data.get("suggestions", [])
+                        if sugg:
+                            view = []
+                            for r in sugg[:20]:
+                                x = dict(r)
+                                x["type"] = _action_badge(str(x.get("type")))
+                                view.append(x)
+                            df_s = _df_from(view, columns=["train_id","type","at_station","station_id","block_id","minutes","reason","why"]) 
+                            if "station_id" in df_s.columns:
+                                df_s["Station"] = df_s["station_id"].map(label_station)
+                            if "at_station" in df_s.columns:
+                                df_s["At"] = df_s["at_station"].map(label_station)
+                            if "train_id" in df_s.columns:
+                                df_s["Train"] = df_s["train_id"].map(label_train)
+                            df_s = df_s.rename(columns={"type":"Action","block_id":"Block","minutes":"Minutes","reason":"Reason","why":"Why"})
+                            df_s = df_s[[c for c in ["Train","Action","At","Station","Block","Minutes","Reason","Why"] if c in df_s.columns]]
+                            st.dataframe(_style_minutes(df_s, col="Minutes"), use_container_width=True)
+                        else:
+                            st.info("No suggestions.")
+                else:
+                    st.error(f"Suggest failed: {resp.text}")
+                except Exception as e:
+                    st.error(f"Suggest error: {e}")
+        with col2:
+            st.write("Role:", role)
+
 with t_lab:
     st.subheader("Analyst Lab – Apply & Validate")
     t0 = st.text_input("T0 (ISO UTC, optional)", value="")
@@ -592,7 +991,19 @@ with t_lab:
             edges = pd.read_parquet(base / "section_edges.parquet")
             nodes = pd.read_parquet(base / "section_nodes.parquet")
             res = apply_and_validate(events, edges, nodes, rec_plan, t0=(t0 or None), horizon_min=int(horizon))
-            st.json(res)
+            # KPIs snapshot
+            k1, k2, k3 = st.columns(3)
+            k1.metric("Risks before", f"{int(res.get('baseline_risks',0))}")
+            k2.metric("Risks after", f"{int(res.get('applied_risks',0))}")
+            k3.metric("Reduction", f"{int(res.get('risk_reduction',0))}")
+            kb, ka = res.get("kpi_before", {}), res.get("kpi_after", {})
+            c1, c2 = st.columns(2)
+            with c1:
+                st.caption("KPI before")
+                _render_kv_table(kb)
+            with c2:
+                st.caption("KPI after")
+                _render_kv_table(ka)
             st.success("Validation complete (not saved)")
         except Exception as e:
             st.error(f"Failed: {e}")
@@ -668,3 +1079,72 @@ if refresh and refresh > 0:
     import time
     time.sleep(refresh)
     _safe_rerun()
+# Name lookups (stations/trains)
+def _station_name_map() -> dict[str, str]:
+    m: dict[str, str] = {}
+    try:
+        # Prefer artifacts stations.json
+        sj = read_json(base / "stations.json")
+        if isinstance(sj, list):
+            for x in sj:
+                sid = str(x.get("station_id")) if x.get("station_id") is not None else None
+                nm = x.get("name") or x.get("station_name")
+                if sid and nm:
+                    m[sid] = str(nm)
+        elif isinstance(sj, dict):
+            for sid, nm in sj.items():
+                m[str(sid)] = str(nm)
+    except Exception:
+        pass
+    # Fallback to repo station_map.csv
+    try:
+        import os
+        from pathlib import Path as _P
+        smp = _P("src/data/station_map.csv")
+        if smp.exists():
+            import pandas as _pd
+            dfm = _pd.read_csv(smp)
+            if not dfm.empty and {"station_id","name"}.issubset(dfm.columns):
+                for _, r in dfm.iterrows():
+                    m[str(r["station_id"])]= str(r["name"]) 
+    except Exception:
+        pass
+    return m
+
+
+def _train_name_map() -> dict[str, str]:
+    m: dict[str, str] = {}
+    # Try events_clean for train_name
+    try:
+        ev = load_parquet(base / "events_clean.parquet")
+        if not ev.empty and "train_id" in ev.columns and any(c in ev.columns for c in ["train_name","Train Name","name"]):
+            name_col = next(c for c in ["train_name","Train Name","name"] if c in ev.columns)
+            g = ev.dropna(subset=["train_id"]).drop_duplicates(subset=["train_id"]) [["train_id", name_col]]
+            for _, r in g.iterrows():
+                m[str(r["train_id"])]= str(r[name_col])
+    except Exception:
+        pass
+    # Fallback raw CSV
+    try:
+        import pandas as _pd
+        raw = _pd.read_csv("data/raw/Train_details.csv")
+        if not raw.empty and set(["Train No","Train Name"]).issubset(raw.columns):
+            for _, r in raw.drop_duplicates(subset=["Train No"]).iterrows():
+                m[str(r["Train No"])]= str(r["Train Name"]) 
+    except Exception:
+        pass
+    return m
+
+
+STATION_NAME = _station_name_map()
+TRAIN_NAME = _train_name_map()
+
+def label_station(sid: Any) -> str:
+    s = str(sid)
+    nm = STATION_NAME.get(s)
+    return f"{nm} ({s})" if nm else s
+
+def label_train(tid: Any) -> str:
+    t = str(tid)
+    nm = TRAIN_NAME.get(t)
+    return f"{nm} ({t})" if nm else t

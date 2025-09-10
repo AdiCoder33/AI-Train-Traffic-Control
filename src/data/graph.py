@@ -96,11 +96,27 @@ def build(
     edges_df = run_times.merge(headways, on=["u", "v"], how="left")
     edges_df["headway"] = edges_df["headway"].fillna(0)
 
+    # Optional seasonality: peak vs off-peak headway p90 (7-10 and 17-20 local time)
+    try:
+        if not dep_times.empty:
+            dt = dep_times.copy()
+            dt["hour"] = pd.to_datetime(dt["dep_time"]).dt.hour
+            peak = dt[dt["hour"].isin([7,8,9,17,18,19,20])]
+            offp = dt[~dt["hour"].isin([7,8,9,17,18,19,20])]
+            h_peak = peak.groupby(["u","v"]).apply(lambda g: (g["dep_time"].diff().dt.total_seconds()/60).quantile(0.9)).reset_index(name="headway_peak") if not peak.empty else pd.DataFrame(columns=["u","v","headway_peak"])
+            h_offp = offp.groupby(["u","v"]).apply(lambda g: (g["dep_time"].diff().dt.total_seconds()/60).quantile(0.9)).reset_index(name="headway_offpeak") if not offp.empty else pd.DataFrame(columns=["u","v","headway_offpeak"])
+            edges_df = edges_df.merge(h_peak, on=["u","v"], how="left").merge(h_offp, on=["u","v"], how="left")
+    except Exception:
+        pass
+
     # Deterministic block ids and default capacities
     edges_df = edges_df.sort_values(["u", "v"]).reset_index(drop=True)
     edges_df["block_id"] = [f"B{i:04d}" for i in range(len(edges_df))]
     edges_df["capacity"] = 1
     edges_df["platform_cap"] = 1
+    # Optional realism tags (placeholders)
+    edges_df["gradient"] = 0.0
+    edges_df["speed_profile"] = "normal"
 
     return edges_df, nodes_df
 

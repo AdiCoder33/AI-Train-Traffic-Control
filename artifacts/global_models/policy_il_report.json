@@ -1,0 +1,22 @@
+{
+  "status": "ok",
+  "rows": 49,
+  "scopes": [
+    "all_india"
+  ],
+  "dates": [
+    "2024-01-01"
+  ],
+  "train_acc": 0.7142857142857143,
+  "data_hash": "1284b1cf9df98f74193a6336d1f87b3189b95122",
+  "features": [
+    "severity_rank",
+    "lead_min",
+    "headway_min",
+    "capacity",
+    "block_len_trains",
+    "platforms",
+    "priority_weight",
+    "recent_holds"
+  ]
+}

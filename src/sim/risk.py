@@ -117,6 +117,7 @@ def analyze(
                 start = entry_i
                 if t0 <= start <= t1:
                     minutes_to = max(0.0, (start - t0).total_seconds() / 60.0)
+                    lead_bucket = "<=5" if minutes_to <= 5 else ("<=10" if minutes_to <= 10 else ("<=15" if minutes_to <= 15 else ">15"))
                     risks.append({
                         "type": "block_capacity",
                         "block_id": bid,
@@ -192,6 +193,7 @@ def analyze(
                         "severity": _severity(minutes_to),
                         "lead_min": minutes_to,
                         "required_hold_min": 2.0,
+                        "lead_bucket": lead_bucket,
                     })
                 active.append(d)
     else:
@@ -214,6 +216,7 @@ def analyze(
                 active = [ex for ex in active if ex > a]
                 if len(active) >= cap:
                     minutes_to = max(0.0, (a - t0).total_seconds() / 60.0)
+                    lead_bucket = "<=5" if minutes_to <= 5 else ("<=10" if minutes_to <= 10 else ("<=15" if minutes_to <= 15 else ">15"))
                     risks.append({
                         "type": "platform_overflow",
                         "station_id": sid,
@@ -222,6 +225,7 @@ def analyze(
                         "severity": _severity(minutes_to),
                         "lead_min": minutes_to,
                         "required_hold_min": 2.0,
+                        "lead_bucket": lead_bucket,
                     })
                 active.append(d)
 

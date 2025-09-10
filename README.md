@@ -142,6 +142,155 @@ Normalize into parquet partitions by date/section.
 
 Generate the full codebase with stubs, docstrings, and a minimal demo run that works out-of-the-box on a 2000-row slice. Prefer readability and modularity over micro-optimizations.
 
+## AI Assistant & Learning (Phases 3–5)
+
+This repo now includes a role‑aware AI assistant, global imitation learning (IL), a simple offline RL path, and safety‑filtered suggestions that integrate with the existing digital twin artifacts.
+
+- Train Global IL on all artifact runs
+  - `python -m src.learn.train_corpus`
+  - Saves model to `artifacts/global_models/policy_il.joblib`
+
+- Build Offline RL Dataset (contextual bandit from logs)
+  - `python -m src.learn.offline_rl --alpha 0.2`
+  - Outputs `artifacts/global_models/offline_rl.jsonl`
+
+- Train Offline RL Policy (Q(s,a) regressor)
+  - `python -m src.learn.train_offrl`
+  - Saves `artifacts/global_models/policy_rl.joblib`
+
+- Offline Evaluation (leaderboard: heuristics vs IL vs RL)
+  - `python -m src.learn.eval_offline`
+  - Fairness-aware reward: use alpha/beta/gamma weights in `offline_rl.py` (minutes, priority, recent holds)
+
+- Cross-Section Generalization
+  - `python -m src.learn.eval_generalization --train_scopes konkan_corridor --test_scopes all_india`
+  - Reports train vs test accuracy and (if RL present) mean Q on test.
+
+- Human-in-the-Loop Shift
+  - IL trainer now backs up prior model and writes `policy_il_confusion_shift.json` to show confusion matrix delta pre/post feedback.
+
+- Latency Benchmark
+  - `python scripts/bench_policy.py --scope all_india --date 2024-01-01 --station S0003 --rounds 20`
+  - Reports mean/p95 latency for end-to-end suggestion inference.
+
+- Inference Order (auto)
+  - Prefer `policy_rl.joblib` → else `policy_il.joblib` (global) → else per‑run IL → else heuristic proposer.
+  - All suggestions pass a safety clamp for headway/platform/dwell and cap holds by request parameter.
+
+- API Endpoints (RBAC via login)
+  - `POST /ai/ask` ⇒ Q&A, role‑aware (CREW/SC/OM/DH/ADM)
+  - `POST /ai/suggest` ⇒ safety‑filtered suggestions (CREW requires `train_id`)
+  - `POST /admin/train_global` ⇒ train global IL
+  - `POST /admin/build_offline_rl?alpha=0.2` ⇒ build RL dataset
+  - `POST /admin/train_offrl` ⇒ train RL policy
+  - `GET  /admin/eval_offline` ⇒ run offline evaluation
+
+### API Examples
+
+Example: ask (summary KPIs and risks)
+
+Request
+
+```
+POST /ai/ask
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "scope": "all_india",
+  "date": "2024-01-01",
+  "query": "otp and top risks"
+}
+```
+
+Response
+
+```
+{
+  "whoami": {"user": "scott", "role": "SC"},
+  "result": {
+    "answer": "Risks: total 12, Critical 2, High 5",
+    "details": {"top": [
+      "headway at B0123 in 8.0 min",
+      "platform_overflow at S0456 in 15.0 min"
+    ]},
+    "role_view": "summary"
+  }
+}
+```
+
+Example: ask (CREW ETA for a train)
+
+```
+POST /ai/ask
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "scope": "all_india",
+  "date": "2024-01-01",
+  "query": "eta",
+  "train_id": "107"
+}
+```
+
+Example: suggestions (safety‑filtered; CREW must include `train_id`)
+
+Request
+
+```
+POST /ai/suggest
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "scope": "all_india",
+  "date": "2024-01-01",
+  "train_id": "107",
+  "max_hold_min": 3
+}
+```
+
+Response (truncated)
+
+```
+{
+  "whoami": {"user": "crew1", "role": "CREW"},
+  "result": {
+    "source": "policy_rl",  // or policy_il / heuristic
+    "suggestions": [
+      {
+        "train_id": "107",
+        "type": "HOLD",
+        "at_station": "S0003",
+        "minutes": 3.0,
+        "reason": "headway",
+        "block_id": "B0123",
+        "why": "Resolve headway on B0123",
+        "impact": {"conflicts_resolved": 1},
+        "safety_checks": ["hold_within_policy_limit"]
+      }
+    ]
+  }
+}
+```
+
+- UI
+  - Assistant tab: natural‑language Q&A and suggestions.
+  - Policy tab: buttons to Train Global IL, Build Offline RL, Train RL Policy, Run Offline Evaluation.
+
+- Run Services
+  - API: `uvicorn src.api.server:app --host 0.0.0.0 --port 8000`
+  - UI: `streamlit run src/ui/app.py`
+
+### One‑Click (Windows)
+- Script: `scripts/oneclick.ps1`
+  - Trains global IL (default), optionally builds Offline RL dataset and trains RL policy, then starts API + UI.
+  - Examples:
+    - Default (IL + services): `./scripts/oneclick.ps1`
+    - Include Offline RL build + train: `./scripts/oneclick.ps1 -BuildRL -TrainRL`
+    - Custom ports: `./scripts/oneclick.ps1 -ApiPort 8001 -UiPort 8502`
+
 ## Phase 1 Pipeline (Windows)
 - Create venv: `python -m venv .venv` then `.\.venv\Scripts\Activate.ps1`
 - Install deps: `pip install -r requirements.txt`

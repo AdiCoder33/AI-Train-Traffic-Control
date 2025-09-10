@@ -13,3 +13,4 @@ plotly>=5.18
 requests>=2.31
 prometheus-client>=0.17
 pyyaml>=6.0
+torch>=2.1 ; platform_system != 'Windows' or platform_machine != 'x86'  # optional; install manually if unavailable

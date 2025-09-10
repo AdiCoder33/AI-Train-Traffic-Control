@@ -35,6 +35,13 @@ __all__ = ["to_train_events"]
 
 logger = logging.getLogger(__name__)
 
+# Schema version for normalized outputs to support idempotency and reproducibility
+SCHEMA_VERSION = "1.0.0"
+
+def normalized_schema_version() -> str:
+    """Return the current normalized schema version string."""
+    return SCHEMA_VERSION
+
 # Column mapping from potential raw names to canonical ones.  The mapping
 # purposefully contains a variety of common alternatives so that the
 # function remains robust to slight variations across datasets.
@@ -206,7 +213,8 @@ def _ensure_station_map(df: pd.DataFrame, path: Path) -> dict[str, str]:
     else:
         ser = col
 
-    unique_names = sorted({n for n in ser.dropna().unique() if n not in name_to_id})
+    # Ensure idempotency: append only truly new names
+    unique_names = sorted({str(n) for n in ser.dropna().unique() if n not in name_to_id})
     if unique_names:
         start_idx = len(station_map)
         new_ids = [f"S{start_idx + i:04d}" for i in range(len(unique_names))]

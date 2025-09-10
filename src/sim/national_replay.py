@@ -97,7 +97,7 @@ def run(
 
     # Platform availability per slot (track slot index for reassignment)
     plat_avail: Dict[str, List[pd.Timestamp]] = {}
-    for sid, (cap, _) in graph.station_attr.items():
+    for sid, (cap, _, _) in graph.station_attr.items():
         plat_avail[sid] = [pd.Timestamp.min.tz_localize("UTC")] * max(1, cap)
 
     block_records: List[dict] = []
@@ -215,8 +215,8 @@ def run(
             if pd.notna(arr_v_act) and exit_time < arr_v_act:
                 exit_time = arr_v_act
 
-            # Platform at v
-            platforms_v, dwell_v = graph.station_attr.get(v, (1, 2.0))
+            # Platform at v with route setup time
+            platforms_v, dwell_v, route_setup = graph.station_attr.get(v, (1, 2.0, 0.5))
             arr_sched_v = sched_arr_map.get(v, pd.NaT)
             dep_sched_v = act_dep_map.get(v, pd.NaT)
             if pd.isna(dep_sched_v):
@@ -226,9 +226,11 @@ def run(
             ov_slot_v = None
             if platform_override is not None:
                 ov_slot_v = platform_override.get((str(train_id), str(v)))
-            start_plat_v, dwell_end_v, slot_v, wait_plat_v = _alloc_platform(v, exit_time, float(dwell_v), slot_idx=ov_slot_v)
+            # Route setup approximated as additional readiness lag before platform entry
+            start_req = exit_time + pd.Timedelta(minutes=float(route_setup))
+            start_plat_v, dwell_end_v, slot_v, wait_plat_v = _alloc_platform(v, start_req, float(dwell_v), slot_idx=ov_slot_v)
             if wait_plat_v > 0:
-                waits.append({"train_id": train_id, "resource": "platform", "id": v, "start_time": str(exit_time), "end_time": str(start_plat_v), "minutes": wait_plat_v, "reason": "platform_busy"})
+                waits.append({"train_id": train_id, "resource": "platform", "id": v, "start_time": str(exit_time), "end_time": str(start_plat_v), "minutes": wait_plat_v, "reason": "platform_busy_or_route"})
             # Respect scheduled/actual departure at v if exists
             next_dep_req = dwell_end_v
             if pd.notna(dep_sched_v):

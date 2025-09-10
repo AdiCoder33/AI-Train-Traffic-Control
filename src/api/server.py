@@ -81,12 +81,32 @@ def require_roles(principal: Principal, allowed: Tuple[str, ...]) -> None:
 
 # ---------- Read models ----------
 @app.get("/state")
-def get_state(scope: str, date: str, principal: Principal = Depends(get_principal)) -> Dict[str, Any]:
+def get_state(
+    scope: str,
+    date: str,
+    principal: Principal = Depends(get_principal),
+    train_id: Optional[str] = None,
+    station_id: Optional[str] = None,
+) -> Dict[str, Any]:
     base = _art_dir(scope, date)
     plats = _read_parquet(base / "national_platform_occupancy.parquet") or _read_parquet(base / "platform_occupancy.parquet")
     waits = _read_parquet(base / "national_waiting_ledger.parquet") or _read_parquet(base / "waiting_ledger.parquet")
     kpis = _read_json(base / "national_sim_kpis.json") or {}
-    # Crew least-privilege: redact other trains if needed (prototype: pass-through)
+    # Role-aware filtering
+    try:
+        if principal.role == "CREW" and train_id:
+            if plats is not None and not plats.empty:
+                plats = plats[plats["train_id"].astype(str) == str(train_id)]
+            if waits is not None and not waits.empty:
+                waits = waits[waits["train_id"].astype(str) == str(train_id)]
+        if principal.role == "SC" and station_id:
+            sid = str(station_id)
+            if plats is not None and not plats.empty and "station_id" in plats.columns:
+                plats = plats[plats["station_id"].astype(str) == sid]
+            if waits is not None and not waits.empty and {"resource","id"}.issubset(waits.columns):
+                waits = waits[((waits["resource"] == "platform") & (waits["id"].astype(str) == sid))]
+    except Exception:
+        pass
     return {
         "platform_occupancy": (plats.head(1000).to_dict(orient="records") if plats is not None else []),
         "waiting_ledger": (waits.head(1000).to_dict(orient="records") if waits is not None else []),
@@ -104,9 +124,15 @@ def get_snapshot(scope: str, date: str) -> Dict[str, Any]:
 
 
 @app.get("/radar")
-def get_radar(scope: str, date: str) -> Dict[str, Any]:
+def get_radar(scope: str, date: str, station_id: Optional[str] = None, train_id: Optional[str] = None) -> Dict[str, Any]:
     base = _art_dir(scope, date)
     radar = _read_json(base / "conflict_radar.json") or []
+    # Optional filtering
+    if station_id:
+        sid = str(station_id)
+        radar = [r for r in radar if str(r.get("station_id","")) == sid or str(r.get("u","")) == sid or str(r.get("v","")) == sid]
+    if train_id:
+        radar = [r for r in radar if str(train_id) in [str(t) for t in (r.get("train_ids") or [])]]
     risk_kpis = _read_json(base / "risk_kpis.json") or {}
     return {"radar": radar, "risk_kpis": risk_kpis}
 
@@ -118,12 +144,32 @@ def _plan_with_version(base: Path) -> Tuple[List[dict], str]:
 
 
 @app.get("/recommendations")
-def get_recommendations(scope: str, date: str) -> Dict[str, Any]:
+def get_recommendations(scope: str, date: str, station_id: Optional[str] = None) -> Dict[str, Any]:
     base = _art_dir(scope, date)
     rec_plan, plan_version = _plan_with_version(base)
     alt_options = _read_json(base / "alt_options.json") or []
     plan_metrics = _read_json(base / "plan_metrics.json") or {}
     audit_log = _read_json(base / "audit_log.json") or {}
+    # Optional station filter for rec_plan
+    if station_id:
+        sid = str(station_id)
+        # Filter recs at station or affecting blocks touching station (best-effort using stored fields)
+        filtered = []
+        for rec in rec_plan:
+            if str(rec.get("station_id", "")) == sid or str(rec.get("at_station", "")) == sid:
+                filtered.append(rec)
+                continue
+            bid = rec.get("block_id")
+            if bid and (base / "national_block_occupancy.parquet").exists():
+                try:
+                    bo = pd.read_parquet(base / "national_block_occupancy.parquet")
+                    g = bo[bo["block_id"].astype(str) == str(bid)]
+                    if not g.empty and ((g["u"].astype(str) == sid) | (g["v"].astype(str) == sid)).any():
+                        filtered.append(rec)
+                        continue
+                except Exception:
+                    pass
+        rec_plan = filtered
     # Attach action_id and ensure explainability fields
     for rec in rec_plan:
         if "action_id" not in rec:
@@ -238,6 +284,53 @@ def post_feedback(fb: Feedback, principal: Principal = Depends(get_principal)) -
     df_all.to_parquet(fb_path, index=False)
 
     return {"status": "ok", "plan_version": plan_version, "action_id": action.get("action_id")}
+
+
+# ---------- AI Assistant (Q&A and Suggestions) ----------
+class AskReq(BaseModel):
+    scope: str
+    date: str
+    query: str
+    train_id: str | None = None
+    station_id: str | None = None
+
+
+class SuggestReq(BaseModel):
+    scope: str
+    date: str
+    train_id: str | None = None
+    station_id: str | None = None
+    max_hold_min: int = 3
+
+
+@app.post("/ai/ask")
+def ai_ask(body: AskReq, principal: Principal = Depends(get_principal)) -> Dict[str, Any]:
+    # All roles can ask; responses are shaped by role
+    try:
+        from src.assist.qa import answer
+        # Role scoping: CREW must supply train_id; SC can supply station_id for filtering
+        if principal.role == "CREW" and not body.train_id:
+            raise HTTPException(status_code=400, detail="CREW must specify train_id for questions")
+        res = answer(body.scope, body.date, body.query, role=principal.role, train_id=body.train_id, station_id=body.station_id)
+        return {"whoami": principal.dict(), "result": res}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/ai/suggest")
+def ai_suggest(body: SuggestReq, principal: Principal = Depends(get_principal)) -> Dict[str, Any]:
+    # CREW can only query suggestions for a specific train they care about
+    if principal.role == "CREW" and not body.train_id:
+        raise HTTPException(status_code=400, detail="CREW must specify train_id for suggestions")
+    # SC should set station_id to scope their view
+    if principal.role == "SC" and not body.station_id:
+        raise HTTPException(status_code=400, detail="SC must specify station_id for suggestions")
+    try:
+        from src.policy.infer import suggest
+        res = suggest(body.scope, body.date, role=principal.role, train_id=body.train_id, station_id=body.station_id, max_hold_min=int(body.max_hold_min))
+        return {"whoami": principal.dict(), "result": res}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 class ApplyReq(BaseModel):
@@ -401,6 +494,67 @@ def set_policy(scope: str, date: str, policy: Policy, principal: Principal = Dep
     prov["updated_by"] = principal.user
     _write_json(base / "provenance.json", prov)
     return {"status": "ok"}
+
+
+# ---------- Admin: model training jobs ----------
+class TrainResp(BaseModel):
+    status: str
+    details: Dict[str, Any] | None = None
+
+
+@app.post("/admin/train_global")
+def admin_train_global(principal: Principal = Depends(get_principal)) -> Dict[str, Any]:
+    require_roles(principal, ("ADM", "OM", "DH"))
+    try:
+        from src.learn.train_corpus import train_global
+        rep = train_global("artifacts")
+        return {"status": rep.get("status", "ok"), "report": rep}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/admin/build_offline_rl")
+def admin_build_offline_rl(alpha: float = 0.2, principal: Principal = Depends(get_principal)) -> Dict[str, Any]:
+    require_roles(principal, ("ADM", "OM", "DH"))
+    try:
+        from src.learn.offline_rl import build_offline_rl
+        p = build_offline_rl("artifacts", alpha=alpha)
+        return {"status": "ok", "path": str(p)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/admin/train_offrl")
+def admin_train_offrl(principal: Principal = Depends(get_principal)) -> Dict[str, Any]:
+    require_roles(principal, ("ADM", "OM", "DH"))
+    try:
+        from src.learn.train_offrl import train_offrl
+        rep = train_offrl("artifacts")
+        return {"status": rep.get("status", "ok"), "report": rep}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/admin/eval_offline")
+def admin_eval_offline(topk: int = 1, principal: Principal = Depends(get_principal)) -> Dict[str, Any]:
+    require_roles(principal, ("ADM", "OM", "DH"))
+    try:
+        from src.learn.eval_offline import evaluate
+        res = evaluate("artifacts", topk=topk)
+        return {"status": res.get("status", "ok"), "result": res}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/admin/train_il_torch")
+def admin_train_il_torch(principal: Principal = Depends(get_principal)) -> Dict[str, Any]:
+    require_roles(principal, ("ADM", "OM", "DH"))
+    try:
+        from src.learn.policy_torch import train_torch
+        rep = train_torch("artifacts")
+        return {"status": rep.get("status", "ok"), "report": rep}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # ---------- Crew feed ----------

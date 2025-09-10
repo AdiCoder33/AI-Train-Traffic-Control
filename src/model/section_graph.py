@@ -39,7 +39,7 @@ class SectionGraph:
     # Lookups
     block_attr: Dict[str, Tuple[float, float, int]]  # block_id -> (min_run, headway, capacity)
     pair_to_block: Dict[Tuple[str, str], str]  # (u,v) -> block_id
-    station_attr: Dict[str, Tuple[int, float]]  # station_id -> (platforms, min_dwell)
+    station_attr: Dict[str, Tuple[int, float, float]]  # station_id -> (platforms, min_dwell, route_setup_min)
 
 
 def _ensure_nodes(nodes_df: pd.DataFrame) -> pd.DataFrame:
@@ -50,8 +50,12 @@ def _ensure_nodes(nodes_df: pd.DataFrame) -> pd.DataFrame:
         df["platforms"] = 1
     if "min_dwell_min" not in df.columns:
         df["min_dwell_min"] = 2.0
+    if "route_setup_min" not in df.columns:
+        # Approximate route setting/throat clearance time per station
+        df["route_setup_min"] = 0.5
     df["platforms"] = pd.to_numeric(df["platforms"], errors="coerce").fillna(1).astype(int)
     df["min_dwell_min"] = pd.to_numeric(df["min_dwell_min"], errors="coerce").fillna(2.0).astype(float)
+    df["route_setup_min"] = pd.to_numeric(df["route_setup_min"], errors="coerce").fillna(0.5).astype(float)
     return df
 
 
@@ -83,9 +87,8 @@ def load_graph(nodes_df: pd.DataFrame, edges_df: pd.DataFrame) -> SectionGraph:
     }
     pair_to_block = {(row["u"], row["v"]): row["block_id"] for _, row in edges.iterrows()}
     station_attr = {
-        row["station_id"]: (int(row["platforms"]), float(row["min_dwell_min"]))
+        row["station_id"]: (int(row["platforms"]), float(row["min_dwell_min"]), float(row.get("route_setup_min", 0.5)))
         for _, row in nodes.iterrows()
     }
 
     return SectionGraph(nodes=nodes, edges=edges, block_attr=block_attr, pair_to_block=pair_to_block, station_attr=station_attr)
-
