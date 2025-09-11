@@ -439,14 +439,14 @@ tab_names = ["Overview", "Board", "Radar", "Recommendations", "Audit", "Policy",
 t_over, t_board, t_radar, t_reco, t_audit, t_policy, t_crew, t_asst, t_lab, t_admin = st.tabs(tab_names)
 
 # Sticky banners for critical/high risks
-    if radar_view:
-        sev_counts: Dict[str, int] = {}
-        for r in radar_view:
-            sev_counts[r.get("severity", "")] = sev_counts.get(r.get("severity", ""), 0) + 1
-        if sev_counts.get("Critical"):
-            st.error(f"Critical risks in horizon: {sev_counts['Critical']}")
-        if sev_counts.get("High"):
-            st.warning(f"High risks in horizon: {sev_counts['High']}")
+if radar_view:
+    sev_counts: Dict[str, int] = {}
+    for r in radar_view:
+        sev_counts[r.get("severity", "")] = sev_counts.get(r.get("severity", ""), 0) + 1
+    if sev_counts.get("Critical"):
+        st.error(f"Critical risks in horizon: {sev_counts['Critical']}")
+    if sev_counts.get("High"):
+        st.warning(f"High risks in horizon: {sev_counts['High']}")
 
 with t_over:
     st.subheader("KPIs & Summary")
@@ -973,8 +973,8 @@ with t_asst:
                             st.dataframe(_style_minutes(df_s, col="Minutes"), use_container_width=True)
                         else:
                             st.info("No suggestions.")
-                else:
-                    st.error(f"Suggest failed: {resp.text}")
+                    else:
+                        st.error(f"Suggest failed: {resp.text}")
                 except Exception as e:
                     st.error(f"Suggest error: {e}")
         with col2:

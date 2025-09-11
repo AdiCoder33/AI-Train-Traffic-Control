@@ -126,7 +126,8 @@ Normalize into parquet partitions by date/section.
   - `pip install -r requirements.txt` (or `poetry install`)
   - Place raw figshare CSVs under `./data/raw/`
   - `python -m src.data.preprocess --section "BEIJING-SHANGHAI" --date 2019-12-10`
-  - UI: `streamlit run src/ui/app.py`
+  - UI (Streamlit): `streamlit run src/ui/app.py`
+  - UI (React): see section "Web UI (React + Vite)"
   - API: `uvicorn src.api.server:app --reload`
 
 ## Acceptance criteria
@@ -442,3 +443,22 @@ Run (Windows):
 Outputs:
 - `plan_apply_report.json` — applied_risks, baseline_risks, risk_reduction, validation_after (post-enforcement overlap/headway checks), wait_minutes_after
 - Optionally `applied_block_occupancy.parquet` if enabled in the code
+
+## Web UI (React + Vite)
+An alternative web frontend is provided under `web/` using React + Vite. It talks to the FastAPI backend (`src/api/server.py`). Use this instead of Streamlit if you prefer a SPA.
+
+Quick start:
+- Start API: `uvicorn src.api.server:app --host 127.0.0.1 --port 8000 --reload`
+- In another terminal:
+  - `cd web`
+  - `npm install`
+  - `npm run dev`
+- Open `http://localhost:5173`.
+
+Configuration:
+- API base URL is read from `VITE_API_BASE` env or can be changed in the sidebar; sample in `web/.env.example`.
+- Auth: for local/dev, the backend accepts either `Authorization: Bearer <token>` or fallback headers `x-user` and `x-role` (set in the sidebar). For production, implement proper login and restrict CORS.
+
+Notes:
+- Initial pages: Overview (KPIs + sample tables), Radar (severity counts + table), Recommendations (fetches from `/recommendations` and can call `/ai/suggest`).
+- Extend pages and components incrementally to reach feature parity with Streamlit.

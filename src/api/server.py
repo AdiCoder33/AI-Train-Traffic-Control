@@ -9,9 +9,20 @@ from datetime import datetime, timezone
 
 import pandas as pd
 from fastapi import Depends, FastAPI, HTTPException, Header, Response
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 app = FastAPI(title="Train Control Decision Support API")
+
+# CORS for local frontend development (React/Vite on localhost)
+# In production, restrict origins to your deployed frontend domains.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # TODO: tighten for prod
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 # ---------- Filesystem helpers ----------
