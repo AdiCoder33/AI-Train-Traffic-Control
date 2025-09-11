@@ -7,7 +7,7 @@
 
 ## Tech stack
 - Python 3.11, Poetry or pip.
-- Core: pandas, numpy, pydantic, orjson, networkx, pulp **or** OR-Tools, scikit-learn (optional), fastapi, uvicorn, streamlit (UI), plotly.
+- Core: pandas, numpy, pydantic, orjson, networkx, pulp **or** OR-Tools, scikit-learn (optional), fastapi, uvicorn, React (Vite), plotly.
 - Tests: pytest.
 - Style: type hints, black, ruff.
 
@@ -27,7 +27,7 @@
    - Replays historical day; injects disruptions (late trains, weather-induced slowdowns).
    - Calls optimizer each 5 minutes (rolling horizon).
    - Produces action plan (hold X at Y for Z min; route via platform P; let A overtake B).
-5) UI (Streamlit):
+5) Web UI (React):
    - Upload/select subset (date/region/section).
    - “Run baseline” vs “Run optimized”.
    - Gantt of block/platform occupancy; delay waterfall; KPIs: throughput, avg delay, 90p delay, platform utilization, conflicts avoided.
@@ -54,8 +54,8 @@
 │  │  └─ scenarios.py
 │  ├─ api/
 │  │  └─ server.py
-│  └─ ui/
-│     └─ app.py
+│  └─ web/
+│     └─ (React SPA)
 ├─ tests/
 │  ├─ test_loader.py
 │  ├─ test_constraints.py
@@ -107,14 +107,8 @@ Normalize into parquet partitions by date/section.
   - Optimize next H=45–60 min window
   - Emit actionable plan: [{train_id, action: "HOLD", at_station, minutes, reason}...]
 
-## UI (ui/app.py – Streamlit)
-- Sidebar: select section/date; sliders: disruption (late N min for Train X), block outage, weather slowdown factor.
-- Buttons: Run Baseline / Run Optimized.
-- Charts:
-  - Gantt: per train over sections; color code delays.
-  - Block/platform occupancy timelines.
-  - KPIs table: throughput, avg/90p delay, utilization, total holds, overtakes.
-- Panel: Explain decisions (show top 3 binding constraints for each action).
+## Web UI (React + Vite)
+Located under `web/`. See section below for details.
 
 ## API (api/server.py – FastAPI)
 - POST /optimize {section, horizon_start, horizon_end, params, disruptions[]} → ActionPlan
@@ -126,8 +120,7 @@ Normalize into parquet partitions by date/section.
   - `pip install -r requirements.txt` (or `poetry install`)
   - Place raw figshare CSVs under `./data/raw/`
   - `python -m src.data.preprocess --section "BEIJING-SHANGHAI" --date 2019-12-10`
-  - UI (Streamlit): `streamlit run src/ui/app.py`
-  - UI (React): see section "Web UI (React + Vite)"
+  - UI: see section "Web UI (React + Vite)"
   - API: `uvicorn src.api.server:app --reload`
 
 ## Acceptance criteria
@@ -282,7 +275,7 @@ Response (truncated)
 
 - Run Services
   - API: `uvicorn src.api.server:app --host 0.0.0.0 --port 8000`
-  - UI: `streamlit run src/ui/app.py`
+  - UI: `cd web && npm install && npm run dev`
 
 ### One‑Click (Windows)
 - Script: `scripts/oneclick.ps1`
@@ -290,7 +283,7 @@ Response (truncated)
   - Examples:
     - Default (IL + services): `./scripts/oneclick.ps1`
     - Include Offline RL build + train: `./scripts/oneclick.ps1 -BuildRL -TrainRL`
-    - Custom ports: `./scripts/oneclick.ps1 -ApiPort 8001 -UiPort 8502`
+    - Custom ports: `./scripts/oneclick.ps1 -ApiPort 8001 -WebPort 5175`
 
 ## Phase 1 Pipeline (Windows)
 - Create venv: `python -m venv .venv` then `.\.venv\Scripts\Activate.ps1`
@@ -445,7 +438,7 @@ Outputs:
 - Optionally `applied_block_occupancy.parquet` if enabled in the code
 
 ## Web UI (React + Vite)
-An alternative web frontend is provided under `web/` using React + Vite. It talks to the FastAPI backend (`src/api/server.py`). Use this instead of Streamlit if you prefer a SPA.
+The web frontend lives under `web/` using React + Vite. It talks to the FastAPI backend (`src/api/server.py`).
 
 Quick start:
 - Start API: `uvicorn src.api.server:app --host 127.0.0.1 --port 8000 --reload`
@@ -461,4 +454,4 @@ Configuration:
 
 Notes:
 - Initial pages: Overview (KPIs + sample tables), Radar (severity counts + table), Recommendations (fetches from `/recommendations` and can call `/ai/suggest`).
-- Extend pages and components incrementally to reach feature parity with Streamlit.
+- Extend pages and components incrementally to reach full feature parity.

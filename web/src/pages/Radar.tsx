@@ -4,6 +4,7 @@ import { usePrefs } from '../lib/prefs'
 import { ScopeBar } from '../components/ScopeBar'
 import { DataTable } from '../components/DataTable'
 import { KpiCard } from '../components/KpiCard'
+import { Heatmap } from '../components/charts/Heatmap'
 
 export default function RadarPage() {
   const api = useApi()
@@ -22,6 +23,24 @@ export default function RadarPage() {
     for (const r of rows) m[r.severity || 'Unknown'] = (m[r.severity || 'Unknown'] || 0) + 1
     return m
   }, [rows])
+  const heat = useMemo(() => {
+    // Bucket lead_min into ranges and pivot by severity
+    const buckets = [0, 5, 10, 20, 30, 45, 60, 90]
+    const bucketLabels = buckets.map((b, i) => i === buckets.length - 1 ? `${b}+` : `${b}-${buckets[i + 1]}`)
+    const sevCats = ['Critical', 'High', 'Medium', 'Low', 'Unknown']
+    const z = sevCats.map(() => Array(bucketLabels.length).fill(0))
+    function idxForLead(lead?: number) {
+      const v = Number(lead ?? 0)
+      for (let i = 0; i < buckets.length - 1; i++) if (v >= buckets[i] && v < buckets[i + 1]) return i
+      return bucketLabels.length - 1
+    }
+    rows.forEach(r => {
+      const sidx = Math.max(0, sevCats.indexOf(r.severity || 'Unknown'))
+      const bidx = idxForLead(Number(r.lead_min))
+      z[sidx][bidx] += 1
+    })
+    return { z, x: bucketLabels, y: sevCats }
+  }, [rows])
 
   return (
     <div>
@@ -36,6 +55,9 @@ export default function RadarPage() {
       </div>
       {err && <div className="card" style={{ borderColor: '#ff6b6b', marginTop: 8 }}>Error: {err}</div>}
       <div className="card" style={{ marginTop: 12 }}>
+        <Heatmap z={heat.z} x={heat.x} y={heat.y} title="Lead (min) vs Severity" />
+      </div>
+      <div className="card" style={{ marginTop: 12 }}>
         <DataTable columns={[
           { key: 'type', label: 'Type' },
           { key: 'severity', label: 'Severity' },
@@ -47,4 +69,3 @@ export default function RadarPage() {
     </div>
   )
 }
-

@@ -2,8 +2,8 @@
 
 ## Services
 - API: `python -m uvicorn src.api.server:app --host 127.0.0.1 --port 8000`
-- Portal: `python -m streamlit run src/ui/app.py --server.port 8501`
-- Combined: `./scripts/run_portal.ps1 <ApiHost> <ApiPort> <UiPort>`
+- Web UI: `cd web && npm install && npm run dev`
+- Combined (Windows): `./scripts/run_portal_web.ps1 <ApiHost> <ApiPort> <WebPort>`
 
 ## Health
 - Liveness: `GET /healthz`
@@ -22,4 +22,3 @@
 
 ## Notes
 - Sandbox is default (no live emissions). To enable live, set `EngineConfig.sandbox = False` in code or derive from env var.
-

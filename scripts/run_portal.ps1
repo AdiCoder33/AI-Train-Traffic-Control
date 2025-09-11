@@ -1,7 +1,7 @@
 param(
   [Parameter(Position=0, Mandatory=$false)][string]$ApiHost = '127.0.0.1',
   [Parameter(Position=1, Mandatory=$false)][int]$ApiPort = 8000,
-  [Parameter(Position=2, Mandatory=$false)][int]$UiPort = 8501
+  [Parameter(Position=2, Mandatory=$false)][int]$WebPort = 5173
 )
 
 $ErrorActionPreference = 'Stop'
@@ -11,17 +11,15 @@ $RepoRoot = Split-Path $PSScriptRoot -Parent
 $VenvPy = Join-Path $RepoRoot ".venv\Scripts\python.exe"
 $Py = if (Test-Path $VenvPy) { $VenvPy } else { "python" }
 
-Write-Host "[PORTAL] Starting API (FastAPI) and UI (Streamlit) using $Py"
-
+Write-Host "[PORTAL] Starting API (FastAPI) using $Py"
 Start-Process -NoNewWindow -FilePath $Py -ArgumentList "-m","uvicorn","src.api.server:app","--host",$ApiHost,"--port",$ApiPort,"--reload"
 
-# Configure Streamlit to be headless and skip usage prompt
-$env:STREAMLIT_SERVER_HEADLESS = "true"
-$env:STREAMLIT_BROWSER_GATHER_USAGE_STATS = "false"
-$env:STREAMLIT_SERVER_ADDRESS = $ApiHost
-$env:STREAMLIT_SERVER_PORT = "$UiPort"
+Write-Host ("[PORTAL] Starting Web UI on http://localhost:{0}" -f $WebPort)
+Push-Location (Join-Path $RepoRoot 'web')
+Write-Host "[PORTAL] Installing web dependencies (npm install)"
+npm install
+$env:VITE_API_BASE = "http://${ApiHost}:${ApiPort}"
+Start-Process -NoNewWindow -FilePath "npm" -ArgumentList "run","dev","--","--port",$WebPort
+Pop-Location
 
-# Use python -m streamlit for portability
-Start-Process -NoNewWindow -FilePath $Py -ArgumentList "-m","streamlit","run","src/ui/app.py","--server.headless","true","--server.address",$ApiHost,"--server.port",$UiPort,"--browser.gatherUsageStats","false"
-
-Write-Host ("[PORTAL] API on http://{0}:{1}, UI on http://{0}:{2}" -f $ApiHost, $ApiPort, $UiPort)
+Write-Host ("[PORTAL] API on http://{0}:{1}, Web UI on http://localhost:{2}" -f $ApiHost, $ApiPort, $WebPort)

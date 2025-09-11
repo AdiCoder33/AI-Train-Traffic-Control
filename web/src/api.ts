@@ -160,6 +160,25 @@ export class ApiClient {
     if (!res.ok) throw new Error(await res.text())
     return res.json()
   }
+
+  async getNodes(scope: string, date: string): Promise<{ nodes: any[] }> {
+    const u = new URL(this.base + '/nodes')
+    u.searchParams.set('scope', scope)
+    u.searchParams.set('date', date)
+    const res = await fetch(u.toString(), { headers: this.headers() })
+    if (!res.ok) throw new Error(await res.text())
+    return res.json()
+  }
+
+  async getBlockOccupancy(scope: string, date: string, station_id?: string): Promise<{ blocks: any[] }> {
+    const u = new URL(this.base + '/blocks')
+    u.searchParams.set('scope', scope)
+    u.searchParams.set('date', date)
+    if (station_id) u.searchParams.set('station_id', station_id)
+    const res = await fetch(u.toString(), { headers: this.headers() })
+    if (!res.ok) throw new Error(await res.text())
+    return res.json()
+  }
 }
 
 export function makeClientFromStorage(): ApiClient {

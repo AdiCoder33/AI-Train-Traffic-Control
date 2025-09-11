@@ -16,9 +16,16 @@ app = FastAPI(title="Train Control Decision Support API")
 
 # CORS for local frontend development (React/Vite on localhost)
 # In production, restrict origins to your deployed frontend domains.
+# Explicit origins to ensure preflight OPTIONS is handled correctly with credentials
+_CORS_ORIGINS = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:5174",
+    "http://127.0.0.1:5174",
+]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # TODO: tighten for prod
+    allow_origins=_CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -100,8 +107,12 @@ def get_state(
     station_id: Optional[str] = None,
 ) -> Dict[str, Any]:
     base = _art_dir(scope, date)
-    plats = _read_parquet(base / "national_platform_occupancy.parquet") or _read_parquet(base / "platform_occupancy.parquet")
-    waits = _read_parquet(base / "national_waiting_ledger.parquet") or _read_parquet(base / "waiting_ledger.parquet")
+    plats = _read_parquet(base / "national_platform_occupancy.parquet")
+    if plats is None or (hasattr(plats, "empty") and plats.empty):
+        plats = _read_parquet(base / "platform_occupancy.parquet")
+    waits = _read_parquet(base / "national_waiting_ledger.parquet")
+    if waits is None or (hasattr(waits, "empty") and waits.empty):
+        waits = _read_parquet(base / "waiting_ledger.parquet")
     kpis = _read_json(base / "national_sim_kpis.json") or {}
     # Role-aware filtering
     try:
@@ -133,6 +144,31 @@ def get_snapshot(scope: str, date: str) -> Dict[str, Any]:
         return {"snapshot": []}
     return {"snapshot": ENGINE.snapshot()}
 
+
+@app.get("/nodes")
+def get_nodes(scope: str, date: str) -> Dict[str, Any]:
+    base = _art_dir(scope, date)
+    nodes = _read_parquet(base / "section_nodes.parquet")
+    if nodes is None or nodes.empty:
+        return {"nodes": []}
+    return {"nodes": nodes.head(2000).to_dict(orient="records")}
+
+
+@app.get("/blocks")
+def get_blocks(scope: str, date: str, station_id: Optional[str] = None) -> Dict[str, Any]:
+    base = _art_dir(scope, date)
+    bo = _read_parquet(base / "national_block_occupancy.parquet")
+    if bo is None or bo.empty:
+        bo = _read_parquet(base / "block_occupancy.parquet")
+    if bo is None or bo.empty:
+        return {"blocks": []}
+    try:
+        if station_id and {"u", "v"}.issubset(bo.columns):
+            sid = str(station_id)
+            bo = bo[(bo["u"].astype(str) == sid) | (bo["v"].astype(str) == sid)]
+    except Exception:
+        pass
+    return {"blocks": bo.head(2000).to_dict(orient="records")}
 
 @app.get("/radar")
 def get_radar(scope: str, date: str, station_id: Optional[str] = None, train_id: Optional[str] = None) -> Dict[str, Any]:

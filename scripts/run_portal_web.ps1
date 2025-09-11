@@ -14,13 +14,10 @@ Start-Process -NoNewWindow -FilePath $Py -ArgumentList "-m","uvicorn","src.api.s
 
 Write-Host ("[PORTAL] Starting Web UI on http://localhost:{0}" -f $WebPort)
 Push-Location web
-if (-not (Test-Path node_modules)) {
-  Write-Host "[PORTAL] Installing web dependencies (npm install)"
-  npm install
-}
-$env:VITE_API_BASE = "http://$ApiHost:$ApiPort"
+Write-Host "[PORTAL] Installing web dependencies (npm install)"
+npm install
+$env:VITE_API_BASE = "http://${ApiHost}:${ApiPort}"
 Start-Process -NoNewWindow -FilePath "npm" -ArgumentList "run","dev"
 Pop-Location
 
 Write-Host "[PORTAL] API and Web UI launched."
-

@@ -1,6 +1,7 @@
 import { NavLink } from 'react-router-dom'
 import { useSession } from '../lib/session'
 import { Field } from './Field'
+import { LayoutDashboard, List, Radar, ListChecks, ScrollText, Shield, Users, Bot, FlaskConical, Settings } from 'lucide-react'
 
 export function Sidebar() {
   const { apiBase, setApiBase, user, role, logout } = useSession()
@@ -13,16 +14,16 @@ export function Sidebar() {
         <span className="badge">{role}</span>
       </div>
       <div className="nav" style={{ marginTop: 8 }}>
-        <NavLink to="/" end>Overview</NavLink>
-        <NavLink to="/board">Board</NavLink>
-        <NavLink to="/radar">Radar</NavLink>
-        <NavLink to="/reco">Recommendations</NavLink>
-        <NavLink to="/audit">Audit</NavLink>
-        <NavLink to="/policy">Policy</NavLink>
-        <NavLink to="/crew">Crew</NavLink>
-        <NavLink to="/assistant">Assistant</NavLink>
-        <NavLink to="/lab">Lab</NavLink>
-        <NavLink to="/admin">Admin</NavLink>
+        <NavLink to="/" end><span className="hstack" style={{ gap: 8 }}><LayoutDashboard size={16}/> Overview</span></NavLink>
+        <NavLink to="/board"><span className="hstack" style={{ gap: 8 }}><List size={16}/> Board</span></NavLink>
+        <NavLink to="/radar"><span className="hstack" style={{ gap: 8 }}><Radar size={16}/> Radar</span></NavLink>
+        <NavLink to="/reco"><span className="hstack" style={{ gap: 8 }}><ListChecks size={16}/> Recommendations</span></NavLink>
+        <NavLink to="/audit"><span className="hstack" style={{ gap: 8 }}><ScrollText size={16}/> Audit</span></NavLink>
+        <NavLink to="/policy"><span className="hstack" style={{ gap: 8 }}><Shield size={16}/> Policy</span></NavLink>
+        <NavLink to="/crew"><span className="hstack" style={{ gap: 8 }}><Users size={16}/> Crew</span></NavLink>
+        <NavLink to="/assistant"><span className="hstack" style={{ gap: 8 }}><Bot size={16}/> Assistant</span></NavLink>
+        <NavLink to="/lab"><span className="hstack" style={{ gap: 8 }}><FlaskConical size={16}/> Lab</span></NavLink>
+        <NavLink to="/admin"><span className="hstack" style={{ gap: 8 }}><Settings size={16}/> Admin</span></NavLink>
       </div>
       <div style={{ height: 16 }} />
       <div className="muted">API Base</div>
@@ -31,4 +32,3 @@ export function Sidebar() {
     </aside>
   )
 }
-
