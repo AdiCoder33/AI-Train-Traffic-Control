@@ -6,7 +6,6 @@
 <p align="center">
   <img src="https://img.shields.io/badge/python-3.11-blue.svg" />
   <img src="https://img.shields.io/badge/build-passing-brightgreen.svg" />
-  <img src="https://img.shields.io/badge/license-MIT-blue.svg" />
   <img src="https://img.shields.io/badge/react-vite-orange.svg" />
 </p>
 
@@ -169,12 +168,6 @@ cd web && npm install && npm run dev
 - Automatic weight tuning (Bayesian optimization)
 - Warm starts, pairwise headways, CP-SAT alt
 - Export action plan to CSV/PDF
-
----
-
-## 📄 License
-
-This project is licensed under the MIT License.
 
 ---
 
