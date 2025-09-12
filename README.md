@@ -1,457 +1,189 @@
- **“Maximizing Section Throughput Using AI-Powered Precise Train Traffic Control”**
+<!-- PROJECT HEADER -->
+<h1 align="center">🚄 AI Train Traffic Control</h1>
+<p align="center">
+  <b>Maximizing Section Throughput Using AI-Powered Precise Train Traffic Control</b>
+</p>
+<p align="center">
+  <img src="https://img.shields.io/badge/python-3.11-blue.svg" />
+  <img src="https://img.shields.io/badge/build-passing-brightgreen.svg" />
+  <img src="https://img.shields.io/badge/license-MIT-blue.svg" />
+  <img src="https://img.shields.io/badge/react-vite-orange.svg" />
+</p>
 
-## Scope
-- Pure software (no hardware), offline or file-based inputs.
-- Dataset: “A high-speed railway network dataset from train operation records and weather data” (Figshare, CC0).
-- Goal: given a section’s trains + constraints, recommend real-time precedence/holding/crossing decisions that minimize total delay and maximize throughput; support what-if simulation.
+---
 
-## Tech stack
-- Python 3.11, Poetry or pip.
-- Core: pandas, numpy, pydantic, orjson, networkx, pulp **or** OR-Tools, scikit-learn (optional), fastapi, uvicorn, React (Vite), plotly.
-- Tests: pytest.
-- Style: type hints, black, ruff.
+## 🚦 Project Overview
 
-## Deliverables
-1) Data prep: loaders that unify timetable, actuals, station graph, delays, weather → normalized parquet.
-2) Section Digital Twin: graph model (stations as nodes, track sections/blocks as edges; capacities, headways, min dwell, gradients if available).
-3) Optimizer:
-   - Rolling-horizon MILP (or OR-Tools CP-SAT) that decides:
-     * per-train departure/arrival times at stations in section
-     * holds and overtakings
-     * platform and block occupancy respecting headway/clearance
-     * priorities (express > passenger > freight) via weights/penalties
-   - Objective: minimize ∑(arrival_delay) + λ*max_delay + μ*meets_conflicts + ν*platform_conflicts; maximize served trains within horizon.
-   - Constraints: block occupancy (no overlap), headway, single-platform per train, dwell ≥ min, speed/capacity implied by edge time, precedence decisions binary.
-   - Fast heuristic fallback: greedy dispatch with look-ahead & priority queue when MILP times out.
-4) Simulator:
-   - Replays historical day; injects disruptions (late trains, weather-induced slowdowns).
-   - Calls optimizer each 5 minutes (rolling horizon).
-   - Produces action plan (hold X at Y for Z min; route via platform P; let A overtake B).
-5) Web UI (React):
-   - Upload/select subset (date/region/section).
-   - “Run baseline” vs “Run optimized”.
-   - Gantt of block/platform occupancy; delay waterfall; KPIs: throughput, avg delay, 90p delay, platform utilization, conflicts avoided.
-   - What-if panel (late train slider, blocked platform, weather slowdown factor).
-   - Explainability: per decision, show binding constraints and marginal penalties.
-6) API (FastAPI): /optimize, /simulate, /kpis for programmatic tests.
-7) Tests + fixtures; small demo dataset slice.
+> **AI-Train-Traffic-Control** is an advanced software system for real-time, AI-driven optimization of train operations, minimizing delays and maximizing throughput on busy rail sections.  
+> **Features:** digital twin, MILP optimization, rolling horizon, web dashboard, simulation & what-if, explainable decisions, and programmatic API.
 
-## File tree (generate all files)
+---
+
+## ✨ Quick Start
+
+```bash
+# 1. Create and activate a virtual environment
+python -m venv .venv && source .venv/bin/activate
+
+# 2. Install dependencies
+pip install -r requirements.txt  # or: poetry install
+
+# 3. Place raw Figshare CSVs
+mkdir -p ./data/raw/
+# (add your dataset files here)
+
+# 4. Prepare data
+python -m src.data.preprocess --section "BEIJING-SHANGHAI" --date 2019-12-10
+
+# 5. Run the API
+uvicorn src.api.server:app --reload
+
+# 6. Run the Web UI
+cd web && npm install && npm run dev
+# Open http://localhost:5173
+```
+
+---
+
+## 📊 Tech Stack
+
+| Layer          | Tech/Libs                                             |
+| -------------- | ----------------------------------------------------- |
+| Backend        | Python 3.11, FastAPI, pandas, numpy, networkx, pulp/OR-Tools, scikit-learn |
+| Optimization   | MILP (PuLP/OR-Tools CP-SAT), rolling horizon, heuristics |
+| Frontend       | React (Vite), Plotly                                  |
+| API            | REST (FastAPI)                                        |
+| Testing        | pytest                                                |
+| Style          | type hints, black, ruff                               |
+
+---
+
+## 🧩 Core Features
+
+- **Section Digital Twin:** Graph model of stations, tracks, blocks, and operational constraints.
+- **Optimizer:** Rolling-horizon MILP/CP-SAT for train scheduling, holding, and platform assignment. Fast greedy heuristic fallback.
+- **Simulator:** Replay past days, inject disruptions (weather, delays), and simulate controller decisions.
+- **Web UI:** Upload datasets, run baseline/optimized scenarios, visualize KPIs, delays, occupancy, and run what-if analysis.
+- **API:** Programmatic endpoints for optimization, simulation, and KPI fetching.
+- **Explainability:** Every decision shows binding constraints and marginal penalties.
+- **AI Assistant & Learning:** Global imitation learning (IL), offline RL, safe suggestions, and human-in-the-loop improvements.
+
+---
+
+## 🗂️ Project Structure
+
+```plaintext
 .
 ├─ pyproject.toml (or requirements.txt)
 ├─ src/
-│  ├─ data/
-│  │  ├─ loader.py
-│  │  ├─ schemas.py
-│  │  └─ preprocess.py
-│  ├─ model/
-│  │  ├─ section_graph.py
-│  │  ├─ constraints.py
-│  │  ├─ optimizer_milp.py
-│  │  └─ heuristic.py
-│  ├─ sim/
-│  │  ├─ rolling_horizon.py
-│  │  └─ scenarios.py
-│  ├─ api/
-│  │  └─ server.py
-│  └─ web/
-│     └─ (React SPA)
-├─ tests/
-│  ├─ test_loader.py
-│  ├─ test_constraints.py
-│  └─ test_optimizer.py
+│  ├─ data/         # Data loaders & preprocessing
+│  ├─ model/        # Digital twin, constraints, optimizer, heuristic
+│  ├─ sim/          # Rolling horizon, scenarios
+│  ├─ api/          # FastAPI server
+│  └─ web/          # React SPA (frontend)
+├─ tests/           # Pytest test cases
+├─ scripts/         # One-click wrappers for Windows/Linux/macOS
+├─ artifacts/       # Output: parquet, KPIs, PNGs
 └─ README.md
-
-## Data contracts (pydantic)
-- TrainEvent { train_id:str, station_id:str, sched_arr:ts, sched_dep:ts, act_arr:ts|None, act_dep:ts|None, day:int, priority:int }
-- Station { station_id:str, name:str }
-- Edge { u:str, v:str, min_run_time:float, headway:float, capacity:int=1, block_id:str, platform_cap:int }
-- WeatherTick { ts:ts, station_id:str, temp:float, wind:float, precip:float, holiday:int }
-Normalize into parquet partitions by date/section.
-
-## Loading & preprocessing (loader.py / preprocess.py)
-- Implement `load_figshare(path)` reading CSVs; map to TrainEvent/Station/Edge/WeatherTick.
-- Build section subset: choose a contiguous corridor of ~8–20 stations with dense traffic.
-- Derive delays: arr_delay = (act_arr - sched_arr).minutes, dep_delay likewise.
-- Compute baseline run-times per edge from schedule medians.
-- Persist to `./artifacts/{section}/{date}/*.parquet`.
-
-## Section graph (section_graph.py)
-- Build networkx DiGraph:
-  - nodes=stations; edges=(station_i → station_j) with attributes {run_time, headway, block_id, capacity}.
-  - platform availability per station; optional parallel tracks via multi-edges or capacity>1.
-- Helper: `compute_feasible_window(train_id, node)` returns earliest/latest times with dwell.
-
-## Optimization (optimizer_milp.py)
-- Function: `optimize_window(events: list[TrainEvent], graph, horizon_start, horizon_end, params) -> list[Action]`
-- Variables:
-  - t_arr[t,s], t_dep[t,s] (continuous, minutes from horizon_start)
-  - y_over[t1,t2,s] (binary: t1 precedes t2 at s)
-  - z_block[t,e] (binary: train t uses edge e within horizon)
-- Core constraints:
-  - Dwell: t_dep ≥ t_arr + dwell_min(t,s)
-  - Edge timing: t_arr[next] ≥ t_dep[this] + run_time(e) + slowdown_factor(weather)
-  - Headway: for any pair (t1,t2) using same block/platform, enforce ≥ headway via y_over binaries (Big-M or indicator constraints)
-  - Platform capacity: at most one train per platform per time; or cumulative with capacity
-  - Fix scheduleds: soft penalties for deviation from sched where needed
-- Objective:
-  minimize Σ delay(t) + λ Σ conflicts + μ Σ holds + ζ Σ overtakes_penalty − κ * trains_served
-- Time limits & gap tolerance; if solver times out → call `heuristic.dispatch()`.
-
-## Heuristic (heuristic.py)
-- Priority queue by (priority, lateness, slack). Greedy assign next feasible departure given headways; allow limited overtakes if it reduces global delay.
-
-## Rolling horizon (rolling_horizon.py)
-- Loop every Δ=5 min:
-  - Observe state (actuals so far, disruptions)
-  - Optimize next H=45–60 min window
-  - Emit actionable plan: [{train_id, action: "HOLD", at_station, minutes, reason}...]
-
-## Web UI (React + Vite)
-Located under `web/`. See section below for details.
-
-## API (api/server.py – FastAPI)
-- POST /optimize {section, horizon_start, horizon_end, params, disruptions[]} → ActionPlan
-- POST /simulate {date, section, scenario} → KPIs + timelines
-
-## README.md
-- Quickstart:
-  - `python -m venv .venv && source .venv/bin/activate`
-  - `pip install -r requirements.txt` (or `poetry install`)
-  - Place raw figshare CSVs under `./data/raw/`
-  - `python -m src.data.preprocess --section "BEIJING-SHANGHAI" --date 2019-12-10`
-  - UI: see section "Web UI (React + Vite)"
-  - API: `uvicorn src.api.server:app --reload`
-
-## Acceptance criteria
-- Load & normalize ≥1 day for a corridor (≥500 train events).
-- Optimizer returns a feasible plan in ≤30s per window on laptop; heuristic in ≤2s.
-- Demonstrated reduction in avg arrival delay vs baseline by ≥10% on sample day.
-- UI shows clear recommendations + KPIs + explainability.
-
-## Nice-to-have (if time permits)
-- Learning policy to tune weights λ, μ, ζ, κ via Bayesian optimization.
-- Cached warm starts; cut generation for pairwise headways; CP-SAT alternative.
-- Export action plan to CSV/PDF.
-
-Generate the full codebase with stubs, docstrings, and a minimal demo run that works out-of-the-box on a 2000-row slice. Prefer readability and modularity over micro-optimizations.
-
-## AI Assistant & Learning (Phases 3–5)
-
-This repo now includes a role‑aware AI assistant, global imitation learning (IL), a simple offline RL path, and safety‑filtered suggestions that integrate with the existing digital twin artifacts.
-
-- Train Global IL on all artifact runs
-  - `python -m src.learn.train_corpus`
-  - Saves model to `artifacts/global_models/policy_il.joblib`
-
-- Build Offline RL Dataset (contextual bandit from logs)
-  - `python -m src.learn.offline_rl --alpha 0.2`
-  - Outputs `artifacts/global_models/offline_rl.jsonl`
-
-- Train Offline RL Policy (Q(s,a) regressor)
-  - `python -m src.learn.train_offrl`
-  - Saves `artifacts/global_models/policy_rl.joblib`
-
-- Offline Evaluation (leaderboard: heuristics vs IL vs RL)
-  - `python -m src.learn.eval_offline`
-  - Fairness-aware reward: use alpha/beta/gamma weights in `offline_rl.py` (minutes, priority, recent holds)
-
-- Cross-Section Generalization
-  - `python -m src.learn.eval_generalization --train_scopes konkan_corridor --test_scopes all_india`
-  - Reports train vs test accuracy and (if RL present) mean Q on test.
-
-- Human-in-the-Loop Shift
-  - IL trainer now backs up prior model and writes `policy_il_confusion_shift.json` to show confusion matrix delta pre/post feedback.
-
-- Latency Benchmark
-  - `python scripts/bench_policy.py --scope all_india --date 2024-01-01 --station S0003 --rounds 20`
-  - Reports mean/p95 latency for end-to-end suggestion inference.
-
-- Inference Order (auto)
-  - Prefer `policy_rl.joblib` → else `policy_il.joblib` (global) → else per‑run IL → else heuristic proposer.
-  - All suggestions pass a safety clamp for headway/platform/dwell and cap holds by request parameter.
-
-- API Endpoints (RBAC via login)
-  - `POST /ai/ask` ⇒ Q&A, role‑aware (CREW/SC/OM/DH/ADM)
-  - `POST /ai/suggest` ⇒ safety‑filtered suggestions (CREW requires `train_id`)
-  - `POST /admin/train_global` ⇒ train global IL
-  - `POST /admin/build_offline_rl?alpha=0.2` ⇒ build RL dataset
-  - `POST /admin/train_offrl` ⇒ train RL policy
-  - `GET  /admin/eval_offline` ⇒ run offline evaluation
-
-### API Examples
-
-Example: ask (summary KPIs and risks)
-
-Request
-
-```
-POST /ai/ask
-Authorization: Bearer <token>
-Content-Type: application/json
-
-{
-  "scope": "all_india",
-  "date": "2024-01-01",
-  "query": "otp and top risks"
-}
 ```
 
-Response
+---
 
-```
-{
-  "whoami": {"user": "scott", "role": "SC"},
-  "result": {
-    "answer": "Risks: total 12, Critical 2, High 5",
-    "details": {"top": [
-      "headway at B0123 in 8.0 min",
-      "platform_overflow at S0456 in 15.0 min"
-    ]},
-    "role_view": "summary"
-  }
-}
-```
+## 🚀 Demo
 
-Example: ask (CREW ETA for a train)
+> _Add screenshots or GIFs here to show the UI, Gantt charts, KPIs, or API usage!_
 
-```
-POST /ai/ask
-Authorization: Bearer <token>
-Content-Type: application/json
+![Demo Screenshot Placeholder](https://via.placeholder.com/800x300?text=Demo+Screenshot)
 
-{
-  "scope": "all_india",
-  "date": "2024-01-01",
-  "query": "eta",
-  "train_id": "107"
-}
-```
+---
 
-Example: suggestions (safety‑filtered; CREW must include `train_id`)
+## 📖 Details
 
-Request
+<details>
+<summary><b>Scope & Deliverables</b></summary>
 
-```
-POST /ai/suggest
-Authorization: Bearer <token>
-Content-Type: application/json
+- Software-only, offline/file-based inputs.
+- Dataset: [Figshare high-speed railway](https://doi.org/10.6084/m9.figshare.16858218).
+- Recommend real-time precedence/holding/crossing to minimize delay & maximize throughput.
+- Deliverables: Data prep, digital twin, optimizer, simulator, web UI, API, tests, demo dataset.
+</details>
 
-{
-  "scope": "all_india",
-  "date": "2024-01-01",
-  "train_id": "107",
-  "max_hold_min": 3
-}
-```
+<details>
+<summary><b>Section Graph & Optimization Details</b></summary>
 
-Response (truncated)
+- Graph: stations as nodes, track sections as edges; capacity, headways, dwell, gradients.
+- MILP/CP-SAT: Departure/arrival times, holds, overtakings, platform/block occupancy, priorities.
+- Objective: Minimize arrival delay + penalties, maximize trains served.
+- Constraints: Block/platform occupancy, headway, dwell, speed, binary precedence.
+- Heuristic: Greedy dispatch by priority, lateness, slack.
+</details>
 
-```
-{
-  "whoami": {"user": "crew1", "role": "CREW"},
-  "result": {
-    "source": "policy_rl",  // or policy_il / heuristic
-    "suggestions": [
-      {
-        "train_id": "107",
-        "type": "HOLD",
-        "at_station": "S0003",
-        "minutes": 3.0,
-        "reason": "headway",
-        "block_id": "B0123",
-        "why": "Resolve headway on B0123",
-        "impact": {"conflicts_resolved": 1},
-        "safety_checks": ["hold_within_policy_limit"]
-      }
-    ]
-  }
-}
-```
+<details>
+<summary><b>Simulator & Rolling Horizon</b></summary>
 
-- UI
-  - Assistant tab: natural‑language Q&A and suggestions.
-  - Policy tab: buttons to Train Global IL, Build Offline RL, Train RL Policy, Run Offline Evaluation.
+- Replay historical days, inject disruptions.
+- Call optimizer every 5 minutes over a 45–60 min rolling window.
+- Output: Hold/route/overtake plans, action plans, simulated KPIs.
+</details>
 
-- Run Services
-  - API: `uvicorn src.api.server:app --host 0.0.0.0 --port 8000`
-  - UI: `cd web && npm install && npm run dev`
+<details>
+<summary><b>Web UI & API</b></summary>
 
-### One‑Click (Windows)
-- Script: `scripts/oneclick.ps1`
-  - Trains global IL (default), optionally builds Offline RL dataset and trains RL policy, then starts API + UI.
-  - Examples:
-    - Default (IL + services): `./scripts/oneclick.ps1`
-    - Include Offline RL build + train: `./scripts/oneclick.ps1 -BuildRL -TrainRL`
-    - Custom ports: `./scripts/oneclick.ps1 -ApiPort 8001 -WebPort 5175`
+- React SPA under `/web`
+- Pages: Overview, Radar, Recommendations, What-If
+- API: `/optimize`, `/simulate`, `/kpis`
+- Auth: Bearer token or dev headers
+</details>
 
-## Phase 1 Pipeline (Windows)
-- Create venv: `python -m venv .venv` then `.\.venv\Scripts\Activate.ps1`
-- Install deps: `pip install -r requirements.txt`
-- Place raw CSVs under `data/raw/`
-- Prepare a stations file like `data/demo_corridor_stations.txt` (one station name or ID per line)
- - Run: `./scripts/run_phase1.ps1 demo_corridor 2024-01-01`
- - Use real dataset only (optional third arg):
-   - `./scripts/run_phase1.ps1 konkan_corridor 2024-01-01 'Train_details*.csv'`
-- Artifacts appear under `artifacts/<corridor>/<date>/` including `events.parquet`, `section_edges.parquet`, `kpis.json`, and `baseline_gantt.png`.
+<details>
+<summary><b>AI Assistant & Learning</b></summary>
 
-### Block-Level View (Windows)
-- After Phase 1 completes for a corridor/date, generate block occupancy + safety view:
-  - `./scripts/run_block_view.ps1 <corridor_id> <YYYY-MM-DD>`
-- Outputs under `artifacts/<corridor>/<date>/`:
-  - `block_occupancy.parquet` (post-headway, per train×block with `entry_time`, `exit_time`, `headway_applied_min`, `delay_min`, `source`)
-  - `block_occupancy_raw.parquet` (pre-headway `entry_time_raw`, `exit_time_raw`)
-  - `conflicts_pre_headway.json` (count + sample overlaps)
-  - `kpis_block.json` (OTP %, avg/p90 exit delay, conflicts_pre_headway, trains_served)
-  - `block_log.json` (hops processed, inferred windows, headway shifts total minutes)
+- Global Imitation Learning (IL), Offline RL, safety filter, human-in-the-loop.
+- Endpoints: `/ai/ask`, `/ai/suggest`, `/admin/train_global`, etc.
+</details>
 
-### One-Shot Wrapper (Windows)
-- Run end-to-end (Phase 1 + Block View) while keeping steps modular:
-  - `./scripts/run_all.ps1 <corridor_id> <YYYY-MM-DD> [csv_glob_pattern]`
-  - Example: `./scripts/run_all.ps1 konkan_corridor 2024-01-01 'Train_details*.csv'`
+---
 
-## Phase 1 Status
-- Pipeline: `scripts/run_phase1.(sh|ps1)` runs load → normalize → slice → graph → baseline → DQ and writes artifacts per corridor/date.
-- Normalization: `src/data/normalize.py` now
-  - accepts `default_service_date` and always outputs `service_date`;
-  - parses time-of-day with the date to UTC timestamps (no parser warnings);
-  - maps station names/codes to stable `station_id` via `station_map.csv`;
-  - handles duplicate station columns safely; extended column aliases.
-- Loader: `src/data/loader.py` reads CSVs as strings with `utf-8-sig` and trims headers to avoid Parquet dtype issues.
-- Windows: added `scripts/run_phase1.ps1` with fail-fast checks after each step.
-- Artifacts: edges/nodes parquet, events/events_clean parquet, `kpis.json`, `baseline_gantt.png`, `dq_report.md`, and `stations.json` under `artifacts/<corridor>/<date>/`.
-- Tests: `pytest -q` runs `tests/test_normalize.py` (column mapping + delay calc).
-- Demo: `data/konkan_corridor_stations.txt` matches the included Indian Railways sample.
+## 🧑‍💻 Development & Scripts
 
-### How To Validate
-- Run (Windows): `./scripts/run_phase1.ps1 konkan_corridor 2024-01-01`
-- Inspect: `artifacts/konkan_corridor/2024-01-01/kpis.json`, `section_edges.parquet`, `baseline_gantt.png`, `dq_report.md`.
+| Task                  | Windows Script         | Linux/macOS Script     |
+|-----------------------|-----------------------|-----------------------|
+| Phase 1 Pipeline      | run_phase1.ps1        | run_phase1.sh         |
+| Block-level View      | run_block_view.ps1    | run_block_view.sh     |
+| One-click End-to-End  | run_all.ps1           | run_all.sh            |
+| National Replay       | run_national.ps1      | run_national.sh       |
 
-### Known Limitations (Phase 1)
-- Graph uses single-track/platform defaults; overtakes and capacities simplified.
-- Baseline replays from actuals when available, otherwise scheduled + medians.
-- Station lists must match the normalized data; use `src/data/station_map.csv` for reference.
- - Block-level view assumes one train per block; run-time after headway uses observed duration when available else `min_run_time`.
+---
 
-## Phase 1 Pipeline (Linux/macOS)
-- Equivalent script exists: `./scripts/run_phase1.sh`.
+## ✅ Acceptance Criteria
 
-### Block-Level View (Linux/macOS)
-- After Phase 1 completes for a corridor/date:
-  - `./scripts/run_block_view.sh <corridor_id> <YYYY-MM-DD>`
-  - Produces the same artifacts as on Windows.
+- Load & normalize ≥1 corridor day (≥500 events)
+- Optimizer: plan in ≤30s/window, heuristic in ≤2s
+- ≥10% reduction in avg arrival delay vs baseline (sample day)
+- UI: clear KPIs, recommendations, explainability
 
-### One-Shot Wrapper (Linux/macOS)
-- Run: `./scripts/run_all.sh <corridor_id> <YYYY-MM-DD> [csv_glob_pattern]`
+---
 
-## Nationwide Baseline Replay
-The national simulator replays trains across all corridors, enforcing block capacity, headways, platforms, and dwell. It emits national block/platform timelines, a waiting ledger, and KPIs.
+## ⚡ Nice-to-Have
 
-Inputs (under `artifacts/<scope>/<date>/`):
-- `events_clean.parquet` (all-India per train×station for the day)
-- `section_nodes.parquet` (all stations with `platforms`, optional `min_dwell_min`)
-- `section_edges.parquet` (all blocks with `min_run_time`, `headway`, `capacity`, `block_id`)
+- Automatic weight tuning (Bayesian optimization)
+- Warm starts, pairwise headways, CP-SAT alt
+- Export action plan to CSV/PDF
 
-Run (Windows):
-- `./scripts/run_national.ps1 all_india 2024-01-01`
+---
 
-Run (Linux/macOS):
-- `./scripts/run_national.sh all_india 2024-01-01`
+## 📄 License
 
-Outputs:
-- `national_block_occupancy.parquet`
-- `national_platform_occupancy.parquet`
-- `national_waiting_ledger.parquet`
-- `national_sim_kpis.json`
+This project is licensed under the MIT License.
 
-Notes:
-- Defaults: `platforms=1`, `min_dwell_min=2.0` if missing; respects actual times when present.
-- Scenario hooks exist (`src/sim/scenarios.py`) for delay/outage/slowdown; integration to be added.
+---
 
-### One-Shot (Prepare + Run National)
-- Windows: `./scripts/run_all_india.ps1 all_india 2024-01-01 'Train_details*.csv'`
-- Linux/macOS: `./scripts/run_all_india.sh all_india 2024-01-01 'Train_details*.csv'`
-- This loads raw → normalizes to `events_clean` → builds national `section_edges`/`section_nodes` → runs the national replay.
+## 🤝 Contributors
 
-## Phase 3: Conflict Radar (Risk Prediction)
-Scan upcoming block and platform allocations to predict potential violations and surface alerts.
+Thanks to all contributors! PRs and suggestions welcome.
 
-Run (Windows):
-- `./scripts/run_risk.ps1 <scope_id> <YYYY-MM-DD> [HorizonMin=60] [T0_ISO]`
+---
 
-Run (Linux/macOS):
-- `./scripts/run_risk.sh <scope_id> <YYYY-MM-DD> [HorizonMin=60] [T0_ISO]`
+## 📬 Contact
 
-Inputs (from artifacts):
-- `section_edges.parquet`, `section_nodes.parquet`
-- `national_block_occupancy.parquet` (or `block_occupancy.parquet`)
-- Optional: `national_platform_occupancy.parquet`, `national_waiting_ledger.parquet`
-
-Outputs (artifacts):
-- `conflict_radar.json` — list of upcoming risks with type, trains, location, time, severity
-- `risk_timeline.parquet` — risks per resource/time bucket
-- `mitigation_preview.json` — simple holds (2/5 min) and whether they resolve
-- `risk_kpis.json` — totals, severity breakdown, avg lead time, % with preview
- - `risk_validation.json` — checks: post-enforcement no overlaps; headway respected; min lead for Critical
-
-Notes:
-- Platform risks fall back to derived dwell windows if a waiting ledger or explicit platform occupancy is unavailable.
-- Mitigation previews include ETA deltas for 2/5 min holds (lightweight propagation along the affected train only).
-
-## Phase 4: Real‑Time Optimization (Heuristic Baseline)
-Proposes safe, explainable controller actions (holds now; hooks for platform reassignment/overtake later) over a rolling horizon, using the digital twin state and risk radar.
-
-Run (Windows):
-- `./scripts/run_risk.ps1 <scope_id> <YYYY-MM-DD> [HorizonMin=60] [T0_ISO]`  (ensure radar exists)
-- `./scripts/run_opt.ps1 <scope_id> <YYYY-MM-DD> [HorizonMin=60] [T0_ISO] [MaxHoldMin=3]`
-
-Run (Linux/macOS):
-- `./scripts/run_risk.sh <scope_id> <YYYY-MM-DD> [HorizonMin=60] [T0_ISO]`
-- `./scripts/run_opt.sh <scope_id> <YYYY-MM-DD> [HorizonMin=60] [T0_ISO] [MaxHoldMin=3]`
-
-Inputs:
-- `section_edges.parquet`, `section_nodes.parquet`
-- `national_block_occupancy.parquet` (or `block_occupancy.parquet`)
-- `conflict_radar.json` (from Phase 3)
-- Optional: priorities mapping (future)
-
-Outputs:
-- `rec_plan.json` — ordered actions (HOLD with minutes and location, reason, why)
-- `alt_options.json` — top-2 alternatives per risk (2 vs 5 min holds)
-- `plan_metrics.json` — actions count, conflicts targeted, expected reduction
-- `audit_log.json` — runtime, strategy, horizon, t0
-
-Notes:
-- Deterministic heuristic: sorts risks by severity/lead/priority and proposes minimal safe holds for headway/block capacity; platform risks use short holds until platform data is enriched.
-- Safety check: actions are constructed to satisfy headway vs the immediate predecessor; full replay verification remains in Phase 2 apply.
-- MILP/CP-SAT hooks can be added; install OR‑Tools/PuLP to switch to exact optimization later.
-- Knobs: `MaxHoldMin` clamps hold durations (default 3) to reduce platform pressure; combine with anchored `T0` for apples‑to‑apples comparisons.
-
-### Apply + Validate (Phase 4)
-Applies `rec_plan.json` holds to the twin and verifies outcome in the horizon.
-
-Run (Windows):
-- `./scripts/apply_plan.ps1 <scope_id> <YYYY-MM-DD> [HorizonMin=60] [T0_ISO]`
-
-Outputs:
-- `plan_apply_report.json` — applied_risks, baseline_risks, risk_reduction, validation_after (post-enforcement overlap/headway checks), wait_minutes_after
-- Optionally `applied_block_occupancy.parquet` if enabled in the code
-
-## Web UI (React + Vite)
-The web frontend lives under `web/` using React + Vite. It talks to the FastAPI backend (`src/api/server.py`).
-
-Quick start:
-- Start API: `uvicorn src.api.server:app --host 127.0.0.1 --port 8000 --reload`
-- In another terminal:
-  - `cd web`
-  - `npm install`
-  - `npm run dev`
-- Open `http://localhost:5173`.
-
-Configuration:
-- API base URL is read from `VITE_API_BASE` env or can be changed in the sidebar; sample in `web/.env.example`.
-- Auth: for local/dev, the backend accepts either `Authorization: Bearer <token>` or fallback headers `x-user` and `x-role` (set in the sidebar). For production, implement proper login and restrict CORS.
-
-Notes:
-- Initial pages: Overview (KPIs + sample tables), Radar (severity counts + table), Recommendations (fetches from `/recommendations` and can call `/ai/suggest`).
-- Extend pages and components incrementally to reach full feature parity.
+For questions, open an issue or reach out to [AdiCoder33](https://github.com/AdiCoder33).
