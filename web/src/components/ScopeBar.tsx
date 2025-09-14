@@ -12,12 +12,18 @@ export function ScopeBar() {
       setStationId(principal.station_id)
     }
   }, [principal, stationId, setStationId])
+  // If logged in as Crew, lock the train to assigned one
+  useEffect(() => {
+    if (principal?.role === 'CREW' && principal.train_id && trainId !== principal.train_id) {
+      setTrainId(principal.train_id)
+    }
+  }, [principal, trainId, setTrainId])
   return (
     <div className="controls" style={{ marginBottom: 12 }}>
       <Field label="Scope"><input value={scope} onChange={e => setScope(e.target.value)} /></Field>
       <Field label="Date"><input value={date} onChange={e => setDate(e.target.value)} /></Field>
       <Field label="Station"><input value={stationId} onChange={e => setStationId(e.target.value)} placeholder="optional" disabled={principal?.role === 'SC'} /></Field>
-      <Field label="Train"><input value={trainId} onChange={e => setTrainId(e.target.value)} placeholder="optional" /></Field>
+      <Field label="Train"><input value={trainId} onChange={e => setTrainId(e.target.value)} placeholder="optional" disabled={principal?.role === 'CREW'} /></Field>
     </div>
   )
 }

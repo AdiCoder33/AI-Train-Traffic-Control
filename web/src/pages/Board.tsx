@@ -9,7 +9,7 @@ import { MapScatter } from '../components/charts/MapScatter'
 
 export default function BoardPage() {
   const api = useApi()
-  const { scope, date, stationId } = usePrefs()
+  const { scope, date, stationId, trainId } = usePrefs()
   const [state, setState] = useState<any | null>(null)
   const [blocks, setBlocks] = useState<any[]>([])
   const [nodes, setNodes] = useState<any[]>([])
@@ -17,11 +17,11 @@ export default function BoardPage() {
   const [err, setErr] = useState<string | null>(null)
   useEffect(() => {
     let live = true
-    api.getState(scope, date, stationId ? { station_id: stationId } : undefined).then(d => { if (!live) return; setState(d) }).catch(e => setErr(String(e)))
+    api.getState(scope, date, { station_id: stationId || undefined, train_id: trainId || undefined }).then(d => { if (!live) return; setState(d) }).catch(e => setErr(String(e)))
     api.getBlockOccupancy(scope, date, stationId || undefined).then(d => { if (!live) return; setBlocks(d.blocks || []) }).catch(() => {})
     api.getNodes(scope, date).then(d => { if (!live) return; setNodes(d.nodes || []) }).catch(() => {})
     return () => { live = false }
-  }, [api, scope, date, stationId])
+  }, [api, scope, date, stationId, trainId])
 
   const waiting = useMemo(() => (state?.waiting_ledger || []).slice(0, 100), [state])
   const timelineItems: TimelineItem[] = useMemo(() => {

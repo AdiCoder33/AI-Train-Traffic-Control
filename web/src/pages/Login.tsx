@@ -4,7 +4,7 @@ import { useSession } from '../lib/session'
 import { Field } from '../components/Field'
 
 export default function LoginPage() {
-  const { apiBase, setApiBase, login, setUser, setRole } = useSession()
+  const { apiBase, setApiBase, login, setUser, setRole, role } = useSession()
   const [username, setUsername] = useState('admin')
   const [password, setPassword] = useState('')
   const [err, setErr] = useState<string | null>(null)
@@ -16,8 +16,8 @@ export default function LoginPage() {
     setLoading(true)
     setErr(null)
     try {
-      await login(username, password)
-      nav('/')
+      const res = await login(username, password)
+      nav(res.role === 'SC' ? '/station' : (res.role === 'CREW' ? '/crew' : '/'))
     } catch (e: any) {
       setErr(e?.message || 'Login failed')
     } finally {
@@ -45,7 +45,7 @@ export default function LoginPage() {
                 {['SC','CREW','OM','DH','AN','ADM'].map(r => <option key={r} value={r}>{r}</option>)}
               </select>
             </Field>
-            <button onClick={() => { setUser(username); nav('/') }}>Continue</button>
+            <button onClick={() => { setUser(username); nav(role === 'SC' ? '/station' : (role === 'CREW' ? '/crew' : '/')) }}>Continue</button>
           </div>
         </div>
       </div>

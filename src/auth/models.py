@@ -15,6 +15,7 @@ class User(Base):
     salt = Column(String(64), nullable=False)
     role = Column(String(10), nullable=False, default="AN")  # SC, CREW, OM, DH, AN, ADM
     station_id = Column(String(100), nullable=True)
+    train_id = Column(String(100), nullable=True)
     created_at = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
 
     sessions = relationship("SessionToken", back_populates="user", cascade="all, delete-orphan")

@@ -23,6 +23,10 @@ def init_db() -> None:
             with ENGINE.connect() as conn:
                 conn.execute(text("ALTER TABLE users ADD COLUMN station_id VARCHAR(100)"))
                 conn.commit()
+        if 'train_id' not in cols:
+            with ENGINE.connect() as conn:
+                conn.execute(text("ALTER TABLE users ADD COLUMN train_id VARCHAR(100)"))
+                conn.commit()
     except Exception:
         # Best-effort; ignore if not supported
         pass
@@ -33,7 +37,7 @@ def _hash_password(password: str, salt: str) -> str:
     return dk.hex()
 
 
-def create_user(username: str, password: str, role: str = "AN", station_id: str | None = None, *, db: Optional[Session] = None) -> User:
+def create_user(username: str, password: str, role: str = "AN", station_id: str | None = None, train_id: str | None = None, *, db: Optional[Session] = None) -> User:
     close = False
     if db is None:
         db = SessionLocal()
@@ -41,7 +45,7 @@ def create_user(username: str, password: str, role: str = "AN", station_id: str 
     try:
         salt = secrets.token_hex(16)
         ph = _hash_password(password, salt)
-        u = User(username=username, password_hash=ph, salt=salt, role=role, station_id=station_id)
+        u = User(username=username, password_hash=ph, salt=salt, role=role, station_id=station_id, train_id=train_id)
         db.add(u)
         db.commit()
         db.refresh(u)
@@ -136,7 +140,7 @@ def list_users(*, db: Optional[Session] = None) -> list[dict]:
         close = True
     try:
         rows = db.execute(select(User)).scalars().all()
-        return [{"username": r.username, "role": r.role, "station_id": r.station_id, "created_at": r.created_at.isoformat()} for r in rows]
+        return [{"username": r.username, "role": r.role, "station_id": r.station_id, "train_id": r.train_id, "created_at": r.created_at.isoformat()} for r in rows]
     finally:
         if close:
             db.close()
@@ -152,6 +156,25 @@ def change_station(username: str, station_id: str | None, *, db: Optional[Sessio
         if not u:
             return None
         u.station_id = station_id
+        db.add(u)
+        db.commit()
+        db.refresh(u)
+        return u
+    finally:
+        if close:
+            db.close()
+
+
+def change_train(username: str, train_id: str | None, *, db: Optional[Session] = None) -> Optional[User]:
+    close = False
+    if db is None:
+        db = SessionLocal()
+        close = True
+    try:
+        u = db.execute(select(User).where(User.username == username)).scalar_one_or_none()
+        if not u:
+            return None
+        u.train_id = train_id
         db.add(u)
         db.commit()
         db.refresh(u)

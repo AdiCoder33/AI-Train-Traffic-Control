@@ -183,7 +183,7 @@ def suggest(
 
     pred_cls = None
     if model_path_kind == "rl":
-    payload = joblib.load(model_p)
+        payload = joblib.load(model_p)
         model = payload.get("model")
         features = payload.get("features") or []
         actions = payload.get("actions") or [2, 3, 5]

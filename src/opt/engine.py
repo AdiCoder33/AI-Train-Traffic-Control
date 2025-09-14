@@ -69,6 +69,11 @@ def propose(
     priorities: Optional[Dict[str, int]] = None,
     max_hold_min: int = 5,
     max_holds_per_train: int = 2,
+    use_ga: bool = False,
+    risk_heat: Optional[Dict[str, float]] = None,
+    precedence_pins: Optional[List[Dict[str, str]]] = None,
+    locked_stations: Optional[List[str]] = None,
+    epsilon: float = 0.2,
 ) -> tuple[List[dict], List[dict], Dict[str, float], Dict[str, object]]:
     t_start = time.time()
     edges = edges_df.set_index("block_id") if not edges_df.empty else pd.DataFrame()
@@ -160,6 +165,8 @@ def propose(
 
     holds_count: Dict[str, int] = {}
 
+    pins = precedence_pins or []
+    locked_stations = [str(s) for s in (locked_stations or [])]
     for r in risks_h:
         rtype = r.get("type")
         trains = [str(t) for t in (r.get("train_ids") or [])]
@@ -171,15 +178,27 @@ def propose(
             if len(trains) == 1:
                 follower = trains[0]
             else:
-                # Prefer holding the train with lower priority and fewer holds so far
-                follower = sorted(
-                    trains,
-                    key=lambda t: (
-                        _priority(t, priorities),
-                        holds_count.get(t, 0),
-                        t,
-                    ),
-                )[-1]
+                # If precedence pin exists for this block, enforce it
+                follower = None
+                block_id = r.get("block_id")
+                if block_id is not None:
+                    for pin in pins:
+                        if str(pin.get("block_id")) == str(block_id):
+                            leader = str(pin.get("leader"))
+                            foll = str(pin.get("follower"))
+                            if leader in trains and foll in trains:
+                                follower = foll
+                                break
+                if follower is None:
+                    # Prefer holding the train with lower priority and fewer holds so far
+                    follower = sorted(
+                        trains,
+                        key=lambda t: (
+                            _priority(t, priorities),
+                            holds_count.get(t, 0),
+                            t,
+                        ),
+                    )[-1]
                 # Fairness: if chosen exceeds max_holds_per_train, try the other candidate
                 if holds_count.get(follower, 0) >= max_holds_per_train and len(trains) == 2:
                     other = [t for t in trains if t != follower][0]
@@ -188,6 +207,19 @@ def propose(
 
             need = float(r.get("required_hold_min", 0.0)) if rtype == "headway" else 2.0
             hold_min = min(max_hold_min, max(2.0, need))
+            # Risk-aware slack: if incident risk is high on this block, add 1–2 min buffer
+            if risk_heat and r.get("block_id") is not None:
+                try:
+                    prob = float(risk_heat.get(str(r.get("block_id")), 0.0))
+                    # Dynamic thresholds from epsilon (chance constraint P(conflict) < epsilon)
+                    th_hi = max(0.5, 1.0 - float(max(0.01, min(0.5, epsilon))))
+                    th_lo = max(0.3, th_hi - 0.2)
+                    if prob >= th_hi:
+                        hold_min = min(max_hold_min, hold_min + 2.0)
+                    elif prob >= th_lo:
+                        hold_min = min(max_hold_min, hold_min + 1.0)
+                except Exception:
+                    pass
 
             # Construct action at the upstream station u for the conflicting block
             block_id = r.get("block_id")
@@ -200,6 +232,7 @@ def propose(
                 "reason": rtype,
                 "block_id": block_id,
                 "why": f"Resolve {rtype} on {block_id} vs {', '.join(t for t in trains if t!=follower)}",
+                "binding_constraints": ["headway"] if rtype == "headway" else (["block_capacity"] if rtype == "block_capacity" else []),
             }
             # Verify headway feasibility post-hold on that block if data available
             g = by_block.get(block_id)
@@ -268,6 +301,8 @@ def propose(
             tr = trains[0] if trains else None
             if tr is None or not sid:
                 continue
+            # Skip platform reassignment suggestions for locked stations
+            sid_str = str(sid)
             # Prefer holding upstream before entering the station to smooth arrivals
             # Find the corresponding incoming block (u->sid) for this train near the risk time
             ts = pd.to_datetime(r.get("time_window")[0], utc=True, errors="coerce") if r.get("time_window") else None
@@ -313,14 +348,16 @@ def propose(
                         slot_idx = abs(hash(f"{sid}-{tr}")) % nplat
                 except Exception:
                     slot_idx = None
-            rec_plan.append({
-                "train_id": tr,
-                "type": "PLATFORM_REASSIGN",
-                "station_id": sid,
-                "platform": (int(slot_idx) if slot_idx is not None else "any"),
-                "reason": "spread_load",
-                "why": f"Use alternate platform at {sid} if available",
-            })
+            if sid_str not in locked_stations:
+                rec_plan.append({
+                    "train_id": tr,
+                    "type": "PLATFORM_REASSIGN",
+                    "station_id": sid,
+                    "platform": (int(slot_idx) if slot_idx is not None else "any"),
+                    "reason": "spread_load",
+                    "why": f"Use alternate platform at {sid} if available",
+                    "binding_constraints": ["platform_capacity"],
+                })
             alt_options.append({
                 "risk_ref": r,
                 "options": [
@@ -344,6 +381,17 @@ def propose(
         "horizon_min": horizon_min,
         "t0": str(t0),
     }
+    # Optional GA fallback/alternative
+    if (use_ga or len(rec_plan) == 0) and not block_occ_df.empty:
+        try:
+            from src.opt.ga import propose_ga
+            ga_actions, ga_metrics = propose_ga(edges_df, nodes_df, block_occ_df, risks_h, max_hold_min=max_hold_min)
+            if use_ga or (len(rec_plan) == 0 and ga_actions):
+                rec_plan = ga_actions
+                plan_metrics.update({"actions": float(len(rec_plan)), "ga_score": float(ga_metrics.get("score", 0.0))})
+                audit_log["strategy"] = "ga"
+        except Exception:
+            pass
     return rec_plan, alt_options, plan_metrics, audit_log
 
 
