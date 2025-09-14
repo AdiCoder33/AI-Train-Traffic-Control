@@ -67,6 +67,7 @@ def _now_iso() -> str:
 class Principal(BaseModel):
     user: str
     role: str  # SC | CREW | OM | DH | AN | ADM
+    station_id: str | None = None
 
 
 def _normalize_role(role: Optional[str]) -> str:
@@ -85,11 +86,11 @@ def get_principal(authorization: Optional[str] = Header(default=None), x_user: O
             token = authorization.split(" ", 1)[1].strip()
             u = get_user_by_token(token)
             if u is not None:
-                return Principal(user=u.username, role=_normalize_role(u.role))
+                return Principal(user=u.username, role=_normalize_role(u.role), station_id=getattr(u, "station_id", None))
     except Exception:
         pass
     # Fallback: header-based mock principal
-    return Principal(user=(x_user or "anonymous"), role=_normalize_role(x_role))
+    return Principal(user=(x_user or "anonymous"), role=_normalize_role(x_role), station_id=None)
 
 
 def require_roles(principal: Principal, allowed: Tuple[str, ...]) -> None:
@@ -114,14 +115,21 @@ def get_state(
     if waits is None or (hasattr(waits, "empty") and waits.empty):
         waits = _read_parquet(base / "waiting_ledger.parquet")
     kpis = _read_json(base / "national_sim_kpis.json") or {}
-    # Role-aware filtering
+    # Role-aware filtering and scoping
     try:
+        # Enforce station scoping for Station Controller (SC)
+        if principal.role == "SC":
+            # Use assigned station_id if available; deny access if none assigned
+            if principal.station_id:
+                station_id = principal.station_id
+            else:
+                raise HTTPException(status_code=400, detail="SC account has no station assignment")
         if principal.role == "CREW" and train_id:
             if plats is not None and not plats.empty:
                 plats = plats[plats["train_id"].astype(str) == str(train_id)]
             if waits is not None and not waits.empty:
                 waits = waits[waits["train_id"].astype(str) == str(train_id)]
-        if principal.role == "SC" and station_id:
+        if station_id:
             sid = str(station_id)
             if plats is not None and not plats.empty and "station_id" in plats.columns:
                 plats = plats[plats["station_id"].astype(str) == sid]
@@ -155,7 +163,7 @@ def get_nodes(scope: str, date: str) -> Dict[str, Any]:
 
 
 @app.get("/blocks")
-def get_blocks(scope: str, date: str, station_id: Optional[str] = None) -> Dict[str, Any]:
+def get_blocks(scope: str, date: str, station_id: Optional[str] = None, principal: Principal = Depends(get_principal)) -> Dict[str, Any]:
     base = _art_dir(scope, date)
     bo = _read_parquet(base / "national_block_occupancy.parquet")
     if bo is None or bo.empty:
@@ -163,6 +171,12 @@ def get_blocks(scope: str, date: str, station_id: Optional[str] = None) -> Dict[
     if bo is None or bo.empty:
         return {"blocks": []}
     try:
+        # Enforce station scoping for SC
+        if principal.role == "SC":
+            if principal.station_id:
+                station_id = principal.station_id
+            else:
+                raise HTTPException(status_code=400, detail="SC account has no station assignment")
         if station_id and {"u", "v"}.issubset(bo.columns):
             sid = str(station_id)
             bo = bo[(bo["u"].astype(str) == sid) | (bo["v"].astype(str) == sid)]
@@ -171,10 +185,15 @@ def get_blocks(scope: str, date: str, station_id: Optional[str] = None) -> Dict[
     return {"blocks": bo.head(2000).to_dict(orient="records")}
 
 @app.get("/radar")
-def get_radar(scope: str, date: str, station_id: Optional[str] = None, train_id: Optional[str] = None) -> Dict[str, Any]:
+def get_radar(scope: str, date: str, station_id: Optional[str] = None, train_id: Optional[str] = None, principal: Principal = Depends(get_principal)) -> Dict[str, Any]:
     base = _art_dir(scope, date)
     radar = _read_json(base / "conflict_radar.json") or []
-    # Optional filtering
+    # Enforce SC station scoping and optional filtering
+    if principal.role == "SC":
+        if principal.station_id:
+            station_id = principal.station_id
+        else:
+            raise HTTPException(status_code=400, detail="SC account has no station assignment")
     if station_id:
         sid = str(station_id)
         radar = [r for r in radar if str(r.get("station_id","")) == sid or str(r.get("u","")) == sid or str(r.get("v","")) == sid]
@@ -191,13 +210,19 @@ def _plan_with_version(base: Path) -> Tuple[List[dict], str]:
 
 
 @app.get("/recommendations")
-def get_recommendations(scope: str, date: str, station_id: Optional[str] = None) -> Dict[str, Any]:
+def get_recommendations(scope: str, date: str, station_id: Optional[str] = None, principal: Principal = Depends(get_principal)) -> Dict[str, Any]:
     base = _art_dir(scope, date)
     rec_plan, plan_version = _plan_with_version(base)
     alt_options = _read_json(base / "alt_options.json") or []
     plan_metrics = _read_json(base / "plan_metrics.json") or {}
     audit_log = _read_json(base / "audit_log.json") or {}
     # Optional station filter for rec_plan
+    # Enforce SC station scoping
+    if principal.role == "SC":
+        if principal.station_id:
+            station_id = principal.station_id
+        else:
+            raise HTTPException(status_code=400, detail="SC account has no station assignment")
     if station_id:
         sid = str(station_id)
         # Filter recs at station or affecting blocks touching station (best-effort using stored fields)
@@ -358,7 +383,13 @@ def ai_ask(body: AskReq, principal: Principal = Depends(get_principal)) -> Dict[
         # Role scoping: CREW must supply train_id; SC can supply station_id for filtering
         if principal.role == "CREW" and not body.train_id:
             raise HTTPException(status_code=400, detail="CREW must specify train_id for questions")
-        res = answer(body.scope, body.date, body.query, role=principal.role, train_id=body.train_id, station_id=body.station_id)
+        sid = body.station_id
+        if principal.role == "SC":
+            if principal.station_id:
+                sid = principal.station_id
+            else:
+                raise HTTPException(status_code=400, detail="SC account has no station assignment")
+        res = answer(body.scope, body.date, body.query, role=principal.role, train_id=body.train_id, station_id=sid)
         return {"whoami": principal.dict(), "result": res}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -369,9 +400,12 @@ def ai_suggest(body: SuggestReq, principal: Principal = Depends(get_principal)) 
     # CREW can only query suggestions for a specific train they care about
     if principal.role == "CREW" and not body.train_id:
         raise HTTPException(status_code=400, detail="CREW must specify train_id for suggestions")
-    # SC should set station_id to scope their view
-    if principal.role == "SC" and not body.station_id:
-        raise HTTPException(status_code=400, detail="SC must specify station_id for suggestions")
+    # SC suggestions are scoped to their assigned station
+    if principal.role == "SC":
+        if principal.station_id:
+            body.station_id = principal.station_id
+        else:
+            raise HTTPException(status_code=400, detail="SC account has no station assignment")
     try:
         from src.policy.infer import suggest
         res = suggest(body.scope, body.date, role=principal.role, train_id=body.train_id, station_id=body.station_id, max_hold_min=int(body.max_hold_min))
@@ -412,7 +446,9 @@ def login(body: LoginReq) -> Dict[str, Any]:
         if not u:
             raise HTTPException(status_code=401, detail="Invalid credentials")
         sess = issue_token(u)
-        return {"token": sess.token, "role": u.role, "username": u.username}
+        # Include station assignment if present
+        station_id = getattr(u, "station_id", None)
+        return {"token": sess.token, "role": u.role, "username": u.username, "station_id": station_id}
     except HTTPException:
         raise
     except Exception as e:
@@ -423,6 +459,7 @@ class NewUser(BaseModel):
     username: str
     password: str
     role: str
+    station_id: Optional[str] = None
 
 
 @app.post("/admin/users")
@@ -431,8 +468,8 @@ def admin_create_user(user: NewUser, principal: Principal = Depends(get_principa
     try:
         from src.auth.service import create_user, init_db
         init_db()
-        u = create_user(user.username, user.password, user.role)
-        return {"username": u.username, "role": u.role}
+        u = create_user(user.username, user.password, user.role, station_id=user.station_id)
+        return {"username": u.username, "role": u.role, "station_id": getattr(u, "station_id", None)}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -462,6 +499,26 @@ def admin_change_role(username: str, body: RoleChange, principal: Principal = De
         if not u:
             raise HTTPException(status_code=404, detail="User not found")
         return {"username": u.username, "role": u.role}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+class StationChange(BaseModel):
+    station_id: str | None = None
+
+
+@app.put("/admin/users/{username}/station")
+def admin_change_station(username: str, body: StationChange, principal: Principal = Depends(get_principal)) -> Dict[str, Any]:
+    require_roles(principal, ("ADM",))
+    try:
+        from src.auth.service import change_station, init_db
+        init_db()
+        u = change_station(username, body.station_id)
+        if not u:
+            raise HTTPException(status_code=404, detail="User not found")
+        return {"username": u.username, "role": u.role, "station_id": getattr(u, "station_id", None)}
     except HTTPException:
         raise
     except Exception as e:

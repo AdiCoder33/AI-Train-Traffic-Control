@@ -8,15 +8,15 @@ import { Heatmap } from '../components/charts/Heatmap'
 
 export default function RadarPage() {
   const api = useApi()
-  const { scope, date } = usePrefs()
+  const { scope, date, stationId } = usePrefs()
   const [rows, setRows] = useState<any[]>([])
   const [kpis, setKpis] = useState<Record<string, any>>({})
   const [err, setErr] = useState<string | null>(null)
   useEffect(() => {
     let live = true
-    api.getRadar(scope, date).then(d => { if (!live) return; setRows(d.radar || []); setKpis(d.risk_kpis || {}) }).catch(e => setErr(String(e)))
+    api.getRadar(scope, date, stationId || undefined).then(d => { if (!live) return; setRows(d.radar || []); setKpis(d.risk_kpis || {}) }).catch(e => setErr(String(e)))
     return () => { live = false }
-  }, [api, scope, date])
+  }, [api, scope, date, stationId])
 
   const severity = useMemo(() => {
     const m: Record<string, number> = {}

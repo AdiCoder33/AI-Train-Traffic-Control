@@ -10,16 +10,16 @@ import { colorForKey } from '../lib/colors'
 
 export default function OverviewPage() {
   const api = useApi()
-  const { scope, date } = usePrefs()
+  const { scope, date, stationId } = usePrefs()
   const [state, setState] = useState<any | null>(null)
   const [err, setErr] = useState<string | null>(null)
   const [radar, setRadar] = useState<any[]>([])
   useEffect(() => {
     let live = true
-    api.getState(scope, date).then(d => { if (!live) return; setState(d) }).catch(e => setErr(String(e)))
-    api.getRadar(scope, date).then(r => { if (!live) return; setRadar(r.radar || []) }).catch(() => {})
+    api.getState(scope, date, stationId ? { station_id: stationId } : undefined).then(d => { if (!live) return; setState(d) }).catch(e => setErr(String(e)))
+    api.getRadar(scope, date, stationId || undefined).then(r => { if (!live) return; setRadar(r.radar || []) }).catch(() => {})
     return () => { live = false }
-  }, [api, scope, date])
+  }, [api, scope, date, stationId])
 
   const kpis = state?.sim_kpis || {}
   const sev = useMemo(() => {

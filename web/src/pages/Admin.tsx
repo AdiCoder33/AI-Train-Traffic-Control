@@ -12,6 +12,7 @@ export default function AdminPage() {
   const [nu, setNu] = useState('')
   const [np, setNp] = useState('')
   const [nr, setNr] = useState('AN')
+  const [ns, setNs] = useState('')
 
   async function refresh() {
     setLoading(true)
@@ -28,13 +29,19 @@ export default function AdminPage() {
   async function createUser() {
     setLoading(true)
     setErr(null)
-    try { await api.adminCreateUser(nu, np, nr); setNu(''); setNp(''); await refresh() } catch (e:any) { setErr(e?.message || 'Create failed') } finally { setLoading(false) }
+    try { await api.adminCreateUser(nu, np, nr, ns || undefined); setNu(''); setNp(''); setNs(''); await refresh() } catch (e:any) { setErr(e?.message || 'Create failed') } finally { setLoading(false) }
   }
 
   async function changeRole(u: string, r: string) {
     setLoading(true)
     setErr(null)
     try { await api.adminChangeRole(u, r); await refresh() } catch (e:any) { setErr(e?.message || 'Update failed') } finally { setLoading(false) }
+  }
+
+  async function changeStation(u: string, s: string) {
+    setLoading(true)
+    setErr(null)
+    try { await api.adminChangeStation(u, s || null); await refresh() } catch (e:any) { setErr(e?.message || 'Update failed') } finally { setLoading(false) }
   }
 
   return (
@@ -49,6 +56,7 @@ export default function AdminPage() {
           <Field label="Role">
             <select value={nr} onChange={e => setNr(e.target.value)}>{ROLES.map(r => <option key={r} value={r}>{r}</option>)}</select>
           </Field>
+          <Field label="Station (for SC)"><input value={ns} onChange={e => setNs(e.target.value)} placeholder="e.g., NDLS" /></Field>
           <button className="primary" onClick={createUser} disabled={loading || !nu || !np}>Create</button>
         </div>
       </div>
@@ -59,12 +67,15 @@ export default function AdminPage() {
           <button onClick={refresh} disabled={loading}>{loading ? 'Refreshing…' : 'Refresh'}</button>
         </div>
         <table className="table">
-          <thead><tr><th>User</th><th>Role</th><th>Change</th></tr></thead>
+          <thead><tr><th>User</th><th>Role</th><th>Station</th><th>Change</th></tr></thead>
           <tbody>
             {users.map((u, i) => (
               <tr key={i}>
                 <td>{u.username || u.user || u.name}</td>
                 <td>{u.role}</td>
+                <td>
+                  <input defaultValue={u.station_id || ''} onBlur={e => changeStation(u.username || u.user || u.name, e.target.value)} placeholder="e.g., NDLS" style={{ width: 100 }} />
+                </td>
                 <td>
                   <select defaultValue={u.role} onChange={e => changeRole(u.username || u.user || u.name, e.target.value)}>
                     {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
@@ -78,4 +89,3 @@ export default function AdminPage() {
     </div>
   )
 }
-

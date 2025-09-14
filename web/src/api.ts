@@ -1,4 +1,4 @@
-export type Principal = { user: string; role: string }
+export type Principal = { user: string; role: string; station_id?: string | null }
 
 export type StateResponse = {
   platform_occupancy: any[]
@@ -36,7 +36,7 @@ export class ApiClient {
     return h
   }
 
-  async login(username: string, password: string): Promise<{ token: string; role: string; username: string }> {
+  async login(username: string, password: string): Promise<{ token: string; role: string; username: string; station_id?: string | null }> {
     const res = await fetch(this.base + '/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -63,10 +63,11 @@ export class ApiClient {
     return res.json()
   }
 
-  async getRadar(scope: string, date: string): Promise<{ radar: any[]; risk_kpis: Record<string, any> }> {
+  async getRadar(scope: string, date: string, station_id?: string): Promise<{ radar: any[]; risk_kpis: Record<string, any> }> {
     const u = new URL(this.base + '/radar')
     u.searchParams.set('scope', scope)
     u.searchParams.set('date', date)
+    if (station_id) u.searchParams.set('station_id', station_id)
     const res = await fetch(u.toString(), { headers: this.headers() })
     if (!res.ok) throw new Error(`radar failed: ${res.status}`)
     return res.json()
@@ -146,9 +147,9 @@ export class ApiClient {
     if (!res.ok) throw new Error(await res.text())
     return res.json()
   }
-  async adminCreateUser(username: string, password: string, role: string): Promise<any> {
+  async adminCreateUser(username: string, password: string, role: string, station_id?: string | null): Promise<any> {
     const res = await fetch(this.base + '/admin/users', {
-      method: 'POST', headers: this.headers(), body: JSON.stringify({ username, password, role })
+      method: 'POST', headers: this.headers(), body: JSON.stringify({ username, password, role, station_id })
     })
     if (!res.ok) throw new Error(await res.text())
     return res.json()
@@ -156,6 +157,14 @@ export class ApiClient {
   async adminChangeRole(username: string, role: string): Promise<any> {
     const res = await fetch(this.base + `/admin/users/${encodeURIComponent(username)}/role`, {
       method: 'PUT', headers: this.headers(), body: JSON.stringify({ role })
+    })
+    if (!res.ok) throw new Error(await res.text())
+    return res.json()
+  }
+
+  async adminChangeStation(username: string, station_id: string | null): Promise<any> {
+    const res = await fetch(this.base + `/admin/users/${encodeURIComponent(username)}/station`, {
+      method: 'PUT', headers: this.headers(), body: JSON.stringify({ station_id })
     })
     if (!res.ok) throw new Error(await res.text())
     return res.json()

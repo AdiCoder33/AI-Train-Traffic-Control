@@ -4,14 +4,12 @@ import { usePrefs } from '../lib/prefs'
 import { ScopeBar } from '../components/ScopeBar'
 import { DataTable } from '../components/DataTable'
 import { Timeline, TimelineItem } from '../components/charts/Timeline'
-import { useState } from 'react'
-import { useApi } from '../lib/session'
 import { colorForKey } from '../lib/colors'
 import { MapScatter } from '../components/charts/MapScatter'
 
 export default function BoardPage() {
   const api = useApi()
-  const { scope, date } = usePrefs()
+  const { scope, date, stationId } = usePrefs()
   const [state, setState] = useState<any | null>(null)
   const [blocks, setBlocks] = useState<any[]>([])
   const [nodes, setNodes] = useState<any[]>([])
@@ -19,11 +17,11 @@ export default function BoardPage() {
   const [err, setErr] = useState<string | null>(null)
   useEffect(() => {
     let live = true
-    api.getState(scope, date).then(d => { if (!live) return; setState(d) }).catch(e => setErr(String(e)))
-    api.getBlockOccupancy(scope, date).then(d => { if (!live) return; setBlocks(d.blocks || []) }).catch(() => {})
+    api.getState(scope, date, stationId ? { station_id: stationId } : undefined).then(d => { if (!live) return; setState(d) }).catch(e => setErr(String(e)))
+    api.getBlockOccupancy(scope, date, stationId || undefined).then(d => { if (!live) return; setBlocks(d.blocks || []) }).catch(() => {})
     api.getNodes(scope, date).then(d => { if (!live) return; setNodes(d.nodes || []) }).catch(() => {})
     return () => { live = false }
-  }, [api, scope, date])
+  }, [api, scope, date, stationId])
 
   const waiting = useMemo(() => (state?.waiting_ledger || []).slice(0, 100), [state])
   const timelineItems: TimelineItem[] = useMemo(() => {
