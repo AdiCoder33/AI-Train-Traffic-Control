@@ -6,6 +6,8 @@ import { KpiCard } from '../components/KpiCard'
 import { DataTable } from '../components/DataTable'
 import { Donut } from '../components/charts/Donut'
 import { Timeline, TimelineItem } from '../components/charts/Timeline'
+import { Timeseries } from '../components/charts/Timeseries'
+import { Bar } from '../components/charts/Bar'
 import { colorForKey } from '../lib/colors'
 
 export default function OverviewPage() {
@@ -14,10 +16,12 @@ export default function OverviewPage() {
   const [state, setState] = useState<any | null>(null)
   const [err, setErr] = useState<string | null>(null)
   const [radar, setRadar] = useState<any[]>([])
+  const [recs, setRecs] = useState<any[]>([])
   useEffect(() => {
     let live = true
     api.getState(scope, date, { station_id: stationId || undefined, train_id: trainId || undefined }).then(d => { if (!live) return; setState(d) }).catch(e => setErr(String(e)))
     api.getRadar(scope, date, { station_id: stationId || undefined, train_id: trainId || undefined }).then(r => { if (!live) return; setRadar(r.radar || []) }).catch(() => {})
+    api.getRecommendations(scope, date).then(d => { if (!live) return; setRecs(d.rec_plan || []) }).catch(() => {})
     return () => { live = false }
   }, [api, scope, date, stationId, trainId])
 
@@ -37,6 +41,42 @@ export default function OverviewPage() {
       color: colorForKey(String(r.train_id ?? '')),
     }))
   }, [state])
+  const trainsPerHour = useMemo(() => {
+    const po = state?.platform_occupancy || []
+    const cnt: Record<string, number> = {}
+    function hourKey(ts: any) {
+      const d = ts ? new Date(ts) : null
+      if (!d) return null
+      d.setMinutes(0, 0, 0)
+      return d.toISOString()
+    }
+    po.forEach((r: any) => {
+      const k = hourKey(r.dep_platform || r.arr_platform)
+      if (!k) return
+      cnt[k] = (cnt[k] || 0) + 1
+    })
+    const keys = Object.keys(cnt).sort()
+    return [{ name: 'Trains/hour', x: keys, y: keys.map(k => cnt[k]) }]
+  }, [state])
+  const waitingByReason = useMemo(() => {
+    const wl = state?.waiting_ledger || []
+    const by: Record<string, number> = {}
+    wl.forEach((w: any) => {
+      const r = String(w.reason || 'other')
+      const m = Number(w.minutes || 0)
+      by[r] = (by[r] || 0) + (isNaN(m) ? 0 : m)
+    })
+    const labels = Object.keys(by)
+    const vals = labels.map(k => by[k])
+    return { labels, vals }
+  }, [state])
+  const recsByType = useMemo(() => {
+    const by: Record<string, number> = {}
+    recs.forEach((r: any) => { by[String(r.type || 'UNKNOWN')] = (by[String(r.type || 'UNKNOWN')] || 0) + 1 })
+    const labels = Object.keys(by)
+    const vals = labels.map(k => by[k])
+    return { labels, vals }
+  }, [recs])
   return (
     <div>
       <h2>Overview</h2>
@@ -56,6 +96,20 @@ export default function OverviewPage() {
         <div className="card" style={{ flex: 2, minWidth: 420 }}>
           <div className="hstack"><strong>Platform Occupancy (sample)</strong><span className="spacer" /><span className="muted">top 40</span></div>
           <Timeline items={timelineItems} />
+        </div>
+      </div>
+      <div className="row" style={{ marginTop: 12 }}>
+        <div className="card" style={{ flex: 2, minWidth: 420 }}>
+          <div className="hstack"><strong>Throughput</strong><span className="spacer" /><span className="muted">trains per hour</span></div>
+          <Timeseries series={trainsPerHour as any} />
+        </div>
+        <div className="card" style={{ flex: 1, minWidth: 320 }}>
+          <div className="hstack"><strong>Waiting Minutes by Reason</strong></div>
+          <Bar x={waitingByReason.labels} y={waitingByReason.vals} />
+        </div>
+        <div className="card" style={{ flex: 1, minWidth: 320 }}>
+          <div className="hstack"><strong>Recommendations by Type</strong></div>
+          <Bar x={recsByType.labels} y={recsByType.vals} />
         </div>
       </div>
       <div className="card" style={{ marginTop: 12 }}>

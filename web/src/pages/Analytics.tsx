@@ -3,6 +3,8 @@ import { useApi } from '../lib/session'
 import { usePrefs } from '../lib/prefs'
 import { ScopeBar } from '../components/ScopeBar'
 import { DataTable } from '../components/DataTable'
+import { Bar } from '../components/charts/Bar'
+import { Timeseries } from '../components/charts/Timeseries'
 
 export default function AnalyticsPage() {
   const api = useApi()
@@ -24,6 +26,25 @@ export default function AnalyticsPage() {
     }
     return Object.entries(byAction).map(([k, v]) => ({ action_id: k, decisions: v.count }))
   }, [audit])
+  const decisionsByType = useMemo(() => {
+    const by: Record<string, number> = {}
+    audit.forEach(a => { const k = String(a.decision || ''); by[k] = (by[k] || 0) + 1 })
+    const labels = Object.keys(by)
+    const vals = labels.map(k => by[k])
+    return { labels, vals }
+  }, [audit])
+  const decisionsPerHour = useMemo(() => {
+    const by: Record<string, number> = {}
+    audit.forEach(a => {
+      const t = a.ts ? new Date(a.ts) : null
+      if (!t) return
+      t.setMinutes(0, 0, 0)
+      const k = t.toISOString()
+      by[k] = (by[k] || 0) + 1
+    })
+    const keys = Object.keys(by).sort()
+    return [{ name: 'Decisions', x: keys, y: keys.map(k => by[k]) }]
+  }, [audit])
 
   return (
     <div>
@@ -39,7 +60,16 @@ export default function AnalyticsPage() {
           <DataTable columns={[{ key: 'train_id', label: 'Train' }, { key: 'type', label: 'Type' }, { key: 'reason', label: 'Reason' }, { key: 'minutes', label: 'Min' }]} rows={recs.slice(0, 50)} />
         </div>
       </div>
+      <div className="row" style={{ marginTop: 12 }}>
+        <div className="card" style={{ flex: 1, minWidth: 360 }}>
+          <div className="muted">Decisions by Type</div>
+          <Bar x={decisionsByType.labels} y={decisionsByType.vals} />
+        </div>
+        <div className="card" style={{ flex: 2, minWidth: 480 }}>
+          <div className="muted">Decisions per Hour</div>
+          <Timeseries series={decisionsPerHour as any} />
+        </div>
+      </div>
     </div>
   )
 }
-

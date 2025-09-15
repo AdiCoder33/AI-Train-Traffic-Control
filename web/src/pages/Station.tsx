@@ -5,6 +5,9 @@ import { ScopeBar } from '../components/ScopeBar'
 import { KpiCard } from '../components/KpiCard'
 import { DataTable } from '../components/DataTable'
 import { Timeline, TimelineItem } from '../components/charts/Timeline'
+import { Timeseries } from '../components/charts/Timeseries'
+import { Bar } from '../components/charts/Bar'
+import { Histogram } from '../components/charts/Histogram'
 import { colorForKey } from '../lib/colors'
 import { StationMap2D } from '../components/station/StationMap2D'
 import { StationMapGL } from '../components/station/StationMapGL'
@@ -69,6 +72,48 @@ export default function StationPage() {
     const soon = (radar || []).filter((r: any) => Number(r.lead_min ?? 999) <= 15 && ['Critical','High'].includes(String(r.severity || '')))
     return soon
   }, [radar])
+  const riskTimeline = useMemo(() => {
+    const buckets: Record<string, number> = {}
+    (radar || []).forEach((r: any) => {
+      const t = r.time_window?.[0]
+      if (!t) return
+      const d = new Date(t)
+      d.setSeconds(0, 0)
+      const step = 15
+      d.setMinutes(Math.floor(d.getMinutes() / step) * step)
+      const k = d.toISOString()
+      buckets[k] = (buckets[k] || 0) + 1
+    })
+    const keys = Object.keys(buckets).sort()
+    return [{ name: 'Risks', x: keys, y: keys.map(k => buckets[k]) }]
+  }, [radar])
+  const waitingByReasonHere = useMemo(() => {
+    const wl = state?.waiting_ledger || []
+    const sid = String(stationId || '')
+    const by: Record<string, number> = {}
+    wl.forEach((w: any) => {
+      const isStation = String(w.resource || '') === 'platform' && String(w.id || '') === sid
+      if (!isStation) return
+      const r = String(w.reason || 'other')
+      const m = Number(w.minutes || 0)
+      by[r] = (by[r] || 0) + (isNaN(m) ? 0 : m)
+    })
+    const labels = Object.keys(by)
+    const vals = labels.map(k => by[k])
+    return { labels, vals }
+  }, [state, stationId])
+  const waitingMinutesHere = useMemo(() => {
+    const wl = state?.waiting_ledger || []
+    const sid = String(stationId || '')
+    const vals: number[] = []
+    wl.forEach((w: any) => {
+      const isStation = String(w.resource || '') === 'platform' && String(w.id || '') === sid
+      if (!isStation) return
+      const m = Number(w.minutes || 0)
+      if (!isNaN(m)) vals.push(m)
+    })
+    return vals
+  }, [state, stationId])
 
   const center = useMemo(() => {
     const node = (nodes || []).find((n: any) => String(n.station_id || '') === String(stationId))
@@ -190,6 +235,20 @@ export default function StationPage() {
         <KpiCard label="Sum Delay (min)" value={(state?.sim_kpis?.total_wait_min ?? 0)} />
         <KpiCard label="90p Delay (min)" value={(state?.sim_kpis?.p90_exit_delay_min ?? 0)} />
         <KpiCard label="Re-opt Count" value={(state?.sim_kpis?.reopt_count ?? 0)} />
+      </div>
+      <div className="row" style={{ marginTop: 8 }}>
+        <div className="card" style={{ flex: 2, minWidth: 420 }}>
+          <div className="hstack"><strong>Risk Timeline</strong><span className="spacer" /><span className="muted">15 min buckets</span></div>
+          <Timeseries series={riskTimeline as any} />
+        </div>
+        <div className="card" style={{ flex: 1, minWidth: 320 }}>
+          <div className="hstack"><strong>Waiting by Reason</strong><span className="spacer" /><span className="muted">{stationId}</span></div>
+          <Bar x={waitingByReasonHere.labels} y={waitingByReasonHere.vals} />
+        </div>
+        <div className="card" style={{ flex: 1, minWidth: 320 }}>
+          <div className="hstack"><strong>Hold Minutes Distribution</strong><span className="spacer" /><span className="muted">{stationId}</span></div>
+          <Histogram values={waitingMinutesHere} nbins={10} />
+        </div>
       </div>
       <div className="card" style={{ marginTop: 8 }}>
         <div className="hstack"><strong>Event Timeline</strong><span className="spacer" /><span className="muted">latest 20</span></div>

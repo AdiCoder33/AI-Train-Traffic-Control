@@ -4,6 +4,7 @@ import { usePrefs } from '../lib/prefs'
 import { ScopeBar } from '../components/ScopeBar'
 import { DataTable } from '../components/DataTable'
 import { Timeline, TimelineItem } from '../components/charts/Timeline'
+import { Heatmap } from '../components/charts/Heatmap'
 import { colorForKey } from '../lib/colors'
 import { MapScatter } from '../components/charts/MapScatter'
 
@@ -28,6 +29,33 @@ export default function BoardPage() {
     const rows = (state?.platform_occupancy || []).slice(0, 80)
     return rows.map((r: any) => ({ y: String(r.station_id ?? ''), start: r.arr_platform, end: r.dep_platform, label: `${r.train_id}` }))
   }, [state])
+  const occupancyHeat = useMemo(() => {
+    const rows = state?.platform_occupancy || []
+    const stations = Array.from(new Set(rows.map((r: any) => String(r.station_id || '')))).sort()
+    const buckets: string[] = []
+    const index: Record<string, number> = {}
+    const grid: number[][] = stations.map(() => [])
+    function pushBucket(ts: any) {
+      const d = ts ? new Date(ts) : null
+      if (!d) return null
+      d.setSeconds(0, 0)
+      const step = 15
+      d.setMinutes(Math.floor(d.getMinutes() / step) * step)
+      const key = d.toISOString()
+      if (!(key in index)) { index[key] = buckets.length; buckets.push(key); stations.forEach((_, i) => { grid[i][index[key]] = grid[i][index[key]] || 0 }) }
+      return key
+    }
+    rows.forEach((r: any) => {
+      const sid = String(r.station_id || '')
+      const rowIdx = stations.indexOf(sid)
+      const k = pushBucket(r.arr_platform)
+      if (rowIdx >= 0 && k) {
+        const col = index[k]
+        grid[rowIdx][col] = (grid[rowIdx][col] || 0) + 1
+      }
+    })
+    return { z: grid.map(row => row.map(v => v || 0)), x: buckets, y: stations }
+  }, [state])
 
   return (
     <div>
@@ -44,6 +72,10 @@ export default function BoardPage() {
           <div className="card" style={{ marginTop: 12 }}>
             <div className="hstack"><strong>Platform Occupancy Timeline</strong><span className="spacer" /><span className="muted">sample</span></div>
             <Timeline items={timelineItems} />
+          </div>
+          <div className="card" style={{ marginTop: 12 }}>
+            <div className="hstack"><strong>Platform Occupancy Heatmap</strong><span className="spacer" /><span className="muted">15 min buckets</span></div>
+            <Heatmap z={occupancyHeat.z} x={occupancyHeat.x} y={occupancyHeat.y} />
           </div>
           <div className="card" style={{ marginTop: 12 }}>
             <div className="hstack"><strong>Waiting Ledger</strong><span className="spacer" /><span className="muted">top 100</span></div>

@@ -3,6 +3,8 @@ import { useApi } from '../lib/session'
 import { usePrefs } from '../lib/prefs'
 import { ScopeBar } from '../components/ScopeBar'
 import { DataTable } from '../components/DataTable'
+import { Bar } from '../components/charts/Bar'
+import { Histogram } from '../components/charts/Histogram'
 
 export default function RecommendationsPage() {
   const api = useApi()
@@ -90,6 +92,17 @@ export default function RecommendationsPage() {
           { key: 'reason', label: 'Reason' }
         ]} rows={rows.slice(0, 50)} />
         <div className="muted" style={{ marginTop: 4 }}>Selected: {selected || 'None'}</div>
+      </div>
+      <div className="row" style={{ marginTop: 12 }}>
+        <div className="card" style={{ flex: 1, minWidth: 320 }}>
+          <div className="hstack"><strong>Recommendation Types</strong></div>
+          <Bar x={[...new Set(rows.map((r: any) => String(r.type || 'UNKNOWN')))]}
+               y={(function(){ const by: Record<string, number> = {}; rows.forEach((r:any)=>{ const k=String(r.type||'UNKNOWN'); by[k]=(by[k]||0)+1 }); return Object.keys(by).map(k=>by[k]) })()} />
+        </div>
+        <div className="card" style={{ flex: 1, minWidth: 320 }}>
+          <div className="hstack"><strong>Hold Minutes Distribution</strong></div>
+          <Histogram values={rows.map((r: any) => Number(r.minutes || 0)).filter((v: number) => !isNaN(v))} nbins={10} />
+        </div>
       </div>
       <div className="card" style={{ marginTop: 12 }}>
         <div className="hstack"><strong>Quick Apply</strong><span className="spacer" /><span className="muted">first 20</span></div>

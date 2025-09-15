@@ -5,6 +5,7 @@ import { ScopeBar } from '../components/ScopeBar'
 import { DataTable } from '../components/DataTable'
 import { KpiCard } from '../components/KpiCard'
 import { Heatmap } from '../components/charts/Heatmap'
+import { Timeseries } from '../components/charts/Timeseries'
 
 export default function RadarPage() {
   const api = useApi()
@@ -41,6 +42,21 @@ export default function RadarPage() {
     })
     return { z, x: bucketLabels, y: sevCats }
   }, [rows])
+  const timeline = useMemo(() => {
+    const buckets: Record<string, number> = {}
+    rows.forEach(r => {
+      const t = r?.time_window?.[0]
+      if (!t) return
+      const d = new Date(t)
+      d.setSeconds(0, 0)
+      const step = 15
+      d.setMinutes(Math.floor(d.getMinutes() / step) * step)
+      const k = d.toISOString()
+      buckets[k] = (buckets[k] || 0) + 1
+    })
+    const keys = Object.keys(buckets).sort()
+    return [{ name: 'Risks', x: keys, y: keys.map(k => buckets[k]) }]
+  }, [rows])
 
   return (
     <div>
@@ -56,6 +72,9 @@ export default function RadarPage() {
       {err && <div className="card" style={{ borderColor: '#ff6b6b', marginTop: 8 }}>Error: {err}</div>}
       <div className="card" style={{ marginTop: 12 }}>
         <Heatmap z={heat.z} x={heat.x} y={heat.y} title="Lead (min) vs Severity" />
+      </div>
+      <div className="card" style={{ marginTop: 12 }}>
+        <Timeseries series={timeline as any} title="Risk Timeline (15 min)" />
       </div>
       <div className="card" style={{ marginTop: 12 }}>
         <DataTable columns={[
