@@ -146,7 +146,8 @@ def run(
 
         # Initialize at first station u
         u0 = hops[0][0]
-        platforms_u, dwell_u = graph.station_attr.get(u0, (1, 2.0))
+        # Station attributes tuple: (platforms, min_dwell, route_setup)
+        platforms_u, dwell_u, _route_setup = graph.station_attr.get(u0, (1, 2.0, 0.5))
         # Arrival at origin (use actual or sched); departure request (actual/sched)
         arr0 = act_arr_map.get(u0, pd.NaT)
         if pd.isna(arr0):

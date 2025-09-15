@@ -51,6 +51,7 @@ nodes_df.to_parquet(nodes_p, index=False)
 PY
 
 echo "[4/4] Running national baseline replay"
-"$(dirname "$0")/run_national.sh" "$SCOPE" "$DATE"
+# Call via bash to avoid execute-bit or CRLF issues on some systems
+bash "$(dirname "$0")/run_national.sh" "$SCOPE" "$DATE"
 
 echo "[ALL-INDIA] Complete. Artifacts at $ARTIFACT_DIR"
