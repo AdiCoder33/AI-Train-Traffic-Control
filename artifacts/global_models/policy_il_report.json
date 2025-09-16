@@ -1,14 +1,14 @@
 {
   "status": "ok",
-  "rows": 49,
+  "rows": 42,
   "scopes": [
     "all_india"
   ],
   "dates": [
     "2024-01-01"
   ],
-  "train_acc": 0.7142857142857143,
-  "data_hash": "1284b1cf9df98f74193a6336d1f87b3189b95122",
+  "train_acc": 0.7380952380952381,
+  "data_hash": "03d901ec40ae98bebfd5d2bab729d968cb11cae3",
   "features": [
     "severity_rank",
     "lead_min",

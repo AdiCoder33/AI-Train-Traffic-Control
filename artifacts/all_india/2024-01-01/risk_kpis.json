@@ -1,9 +1,9 @@
 {
-  "total_risks": 49.0,
-  "critical": 17.0,
-  "high": 19.0,
-  "medium": 13.0,
+  "total_risks": 42.0,
+  "critical": 0.0,
+  "high": 33.0,
+  "medium": 9.0,
   "low": 0.0,
-  "avg_lead_min": 20.183673470068026,
+  "avg_lead_min": 24.547619048412702,
   "pct_with_preview": 100.0
 }

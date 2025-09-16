@@ -196,6 +196,9 @@ def get_state(
     }
 
 
+
+
+
 @app.get("/snapshot")
 def get_snapshot(scope: str, date: str) -> Dict[str, Any]:
     global ENGINE
@@ -314,6 +317,7 @@ def get_recommendations(scope: str, date: str, station_id: Optional[str] = None,
     rec_plan, plan_version = _plan_with_version(base)
     alt_options = _read_json(base / "alt_options.json") or []
     plan_metrics = _read_json(base / "plan_metrics.json") or {}
+    plan_apply_report = _read_json(base / "plan_apply_report.json")
     audit_log = _read_json(base / "audit_log.json") or {}
     # Optional station filter for rec_plan
     # Enforce SC station scoping
@@ -350,6 +354,7 @@ def get_recommendations(scope: str, date: str, station_id: Optional[str] = None,
         "rec_plan": rec_plan,
         "alt_options": alt_options,
         "plan_metrics": plan_metrics,
+        "plan_apply_report": plan_apply_report,
         "audit_log": audit_log,
         "plan_version": plan_version,
     }

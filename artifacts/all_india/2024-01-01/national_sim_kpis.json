@@ -1,9 +1,10 @@
 {
   "trains_served": 11113,
-  "otp_exit_pct": 0.9268424367857464,
-  "avg_exit_delay_min": 780159.1134359251,
-  "p90_exit_delay_min": 1531259.3999999997,
-  "total_wait_min": 8671730694.899752,
-  "wait_min_block_or_headway": 524824810.29993,
-  "wait_min_platform_busy": 8146905884.599821
+  "otp_exit_pct": 0.7468730315846306,
+  "avg_exit_delay_min": 780328.1550845932,
+  "p90_exit_delay_min": 1531599.4499999997,
+  "total_wait_min": 8673522565.299751,
+  "wait_min_block_or_headway": 524938165.59993,
+  "wait_min_platform_busy": 7064091350.799881,
+  "wait_min_platform_busy_or_route": 1084493048.89994
 }

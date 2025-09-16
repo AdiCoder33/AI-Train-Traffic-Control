@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useApi } from '../lib/session'
 import { usePrefs } from '../lib/prefs'
 import { ScopeBar } from '../components/ScopeBar'
@@ -10,15 +10,45 @@ export default function RecommendationsPage() {
   const api = useApi()
   const { scope, date, stationId, trainId } = usePrefs()
   const [rows, setRows] = useState<any[]>([])
+  const [applyReport, setApplyReport] = useState<any | null>(null)
   const [err, setErr] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [optimizing, setOptimizing] = useState(false)
   const [applying, setApplying] = useState<string | null>(null)
   const [selected, setSelected] = useState<string | null>(null)
+  const reductionChart = useMemo(() => {
+    if (!applyReport) return null
+    const toNumber = (v: any) => {
+      const n = Number(v)
+      return Number.isFinite(n) ? n : 0
+    }
+    const delayBefore = toNumber(applyReport.wait_minutes_before)
+    const delayAfter = toNumber(applyReport.wait_minutes_after)
+    const riskBefore = toNumber(applyReport.baseline_risks)
+    const riskAfter = toNumber(applyReport.applied_risks)
+    const hasData = [delayBefore, delayAfter, riskBefore, riskAfter].some(v => v > 0)
+    if (!hasData) return null
+    const categories = ['Delay Minutes', 'Risk Events']
+    return {
+      series: [
+        { name: 'Before', x: categories, y: [delayBefore, riskBefore], colorKey: 'before' },
+        { name: 'After', x: categories, y: [delayAfter, riskAfter], colorKey: 'after' },
+      ],
+      delta: { delay: delayBefore - delayAfter, risk: riskBefore - riskAfter },
+    }
+  }, [applyReport])
 
   useEffect(() => {
     let live = true
-    api.getRecommendations(scope, date, stationId || undefined).then(d => { if (!live) return; setRows(d.rec_plan || []) }).catch(e => setErr(String(e)))
+    api.getRecommendations(scope, date, stationId || undefined).then(d => {
+      if (!live) return
+      setRows(d.rec_plan || [])
+      setApplyReport(d.plan_apply_report ?? null)
+    }).catch(e => {
+      if (!live) return
+      setErr(String(e))
+      setApplyReport(null)
+    })
     return () => { live = false }
   }, [api, scope, date, stationId])
 
@@ -28,6 +58,7 @@ export default function RecommendationsPage() {
     try {
       const res = await api.suggest({ scope, date, train_id: trainId || null, max_hold_min: 3, station_id: stationId || '' })
       setRows(res?.result?.suggestions || [])
+      setApplyReport(null)
     } catch (e: any) {
       setErr(e?.message || 'Suggest failed')
     } finally {
@@ -42,6 +73,7 @@ export default function RecommendationsPage() {
       await api.optimize({ scope, date, horizon_min: 60 })
       const d = await api.getRecommendations(scope, date, stationId || undefined)
       setRows(d.rec_plan || [])
+      setApplyReport(d.plan_apply_report ?? null)
     } catch (e: any) {
       setErr(e?.message || 'Optimize failed')
     } finally {
@@ -93,6 +125,15 @@ export default function RecommendationsPage() {
         ]} rows={rows.slice(0, 50)} />
         <div className="muted" style={{ marginTop: 4 }}>Selected: {selected || 'None'}</div>
       </div>
+      {reductionChart && (
+        <div className="card" style={{ marginTop: 12 }}>
+          <div className="hstack"><strong>Impact: Delay & Risk Reduction</strong></div>
+          <Bar series={reductionChart.series} />
+          <div className="muted" style={{ marginTop: 8 }}>
+            Delay change: {Math.round(reductionChart.delta.delay).toLocaleString()} min · Risk change: {Math.round(reductionChart.delta.risk).toLocaleString()}
+          </div>
+        </div>
+      )}
       <div className="row" style={{ marginTop: 12 }}>
         <div className="card" style={{ flex: 1, minWidth: 320 }}>
           <div className="hstack"><strong>Recommendation Types</strong></div>

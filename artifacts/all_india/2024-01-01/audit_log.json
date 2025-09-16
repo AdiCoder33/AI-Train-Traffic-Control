@@ -1,8 +1,8 @@
 {
   "strategy": "heuristic",
-  "runtime_sec": 7.139,
+  "runtime_sec": 6.41,
   "max_hold_min": 3,
   "max_holds_per_train": 2,
   "horizon_min": 60,
-  "t0": "2024-01-01 00:15:00+00:00"
+  "t0": "2024-01-01 00:03:00+00:00"
 }

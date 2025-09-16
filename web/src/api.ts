@@ -6,7 +6,6 @@ export type StateResponse = {
   sim_kpis: Record<string, number>
   whoami: Principal
 }
-
 const API_BASE = (import.meta.env.VITE_API_BASE as string) || 'http://127.0.0.1:8000'
 
 export type ClientConfig = {
@@ -63,6 +62,7 @@ export class ApiClient {
     return res.json()
   }
 
+
   async getRadar(scope: string, date: string, opts?: { station_id?: string; train_id?: string }): Promise<{ radar: any[]; risk_kpis: Record<string, any> }> {
     const u = new URL(this.base + '/radar')
     u.searchParams.set('scope', scope)
@@ -74,7 +74,7 @@ export class ApiClient {
     return res.json()
   }
 
-  async getRecommendations(scope: string, date: string, station_id?: string): Promise<{ rec_plan: any[]; alt_options: any[]; plan_metrics: Record<string, any> }> {
+  async getRecommendations(scope: string, date: string, station_id?: string): Promise<{ rec_plan: any[]; alt_options: any[]; plan_metrics: Record<string, any>; plan_apply_report?: Record<string, any> | null; plan_version?: string; audit_log?: Record<string, any> }> {
     const u = new URL(this.base + '/recommendations')
     u.searchParams.set('scope', scope)
     u.searchParams.set('date', date)

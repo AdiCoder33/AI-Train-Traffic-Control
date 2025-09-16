@@ -1,7 +1,7 @@
 {
   "post_overlap_violations": 0,
   "headway_violations": 0,
-  "critical_min_lead_min": 0.0,
+  "critical_min_lead_min": null,
   "ok_post_no_overlap": true,
   "ok_headway_enforced": true
 }
